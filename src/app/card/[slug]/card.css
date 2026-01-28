@@ -122,11 +122,10 @@
 /* Broken Square - Static Frame with Animated Gradient */
 .broken-square {
   position: absolute;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 260px;
-  height: 220px;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
   pointer-events: none;
   z-index: 1;
 }
@@ -138,8 +137,8 @@
 
 .broken-square svg path {
   stroke: url(#brokenSquareGradient);
-  stroke-width: 2;
-  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.4));
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.3));
 }
 
 /* Gradient animation for broken square stroke */
@@ -696,8 +695,9 @@
   }
 
   .broken-square {
-    width: 220px;
-    height: 190px;
-    top: 28px;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
   }
 }

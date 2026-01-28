@@ -180,9 +180,9 @@ export default function DigitalCard() {
         <div className="corner corner-br" />
 
         {/* Broken square watermark */}
-        {/* Broken Square - Static Frame with Animated Gradient */}
+        {/* Broken Square - Full Card Frame with Animated Gradient */}
         <div className="broken-square">
-          <svg viewBox="0 0 130 110" fill="none">
+          <svg viewBox="0 0 100 100" fill="none" preserveAspectRatio="none">
             <defs>
               <linearGradient id="brokenSquareGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#00F0FF">
@@ -196,11 +196,11 @@ export default function DigitalCard() {
                 </stop>
               </linearGradient>
             </defs>
-            {/* Top-left corner + top edge + partial right */}
-            <path d="M5 5 L125 5 L125 35" stroke="url(#brokenSquareGradient)" strokeWidth="2" strokeLinecap="square" />
-            {/* Break/gap in top-right */}
-            {/* Bottom-right continues + bottom edge + left edge back to top */}
-            <path d="M125 75 L125 105 L5 105 L5 5" stroke="url(#brokenSquareGradient)" strokeWidth="2" strokeLinecap="square" />
+            {/* Top edge + right side partial */}
+            <path d="M0 0 L100 0 L100 30" stroke="url(#brokenSquareGradient)" strokeWidth="0.5" strokeLinecap="square" vectorEffect="non-scaling-stroke" />
+            {/* Gap/break in right side */}
+            {/* Right side continues + bottom + left side back to top */}
+            <path d="M100 70 L100 100 L0 100 L0 0" stroke="url(#brokenSquareGradient)" strokeWidth="0.5" strokeLinecap="square" vectorEffect="non-scaling-stroke" />
           </svg>
         </div>
 
