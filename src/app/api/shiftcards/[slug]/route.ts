@@ -50,7 +50,8 @@ export async function GET(
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (serviceKey) {
       const serviceClient = createClient(supabaseUrl, serviceKey)
-      serviceClient
+      // Fire and forget - don't await
+      void serviceClient
         .from('shiftcard_analytics')
         .insert({
           card_id: card.id,
@@ -58,8 +59,6 @@ export async function GET(
           referrer: request.headers.get('referer'),
           user_agent: request.headers.get('user-agent'),
         })
-        .then(() => {})
-        .catch(() => {})
     }
 
     return NextResponse.json(card)
