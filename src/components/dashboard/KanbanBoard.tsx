@@ -203,14 +203,14 @@ export function KanbanBoard({ tasks, onTaskMove, onTaskClick }: KanbanBoardProps
                     </p>
                   )}
 
-                  {/* Hours bar */}
+                  {/* Hours bar - shows shift hours vs traditional estimate */}
                   {task.traditionalEstimate > 0 && (
                     <div style={{ marginTop: 10 }}>
                       <div
                         style={{
-                          height: 4,
-                          background: '#FF00AA33',
-                          borderRadius: 2,
+                          height: 6,
+                          background: 'rgba(255, 0, 170, 0.4)',
+                          borderRadius: 3,
                           overflow: 'hidden',
                         }}
                       >
@@ -218,8 +218,9 @@ export function KanbanBoard({ tasks, onTaskMove, onTaskClick }: KanbanBoardProps
                           style={{
                             height: '100%',
                             width: `${Math.min((task.shiftHours / task.traditionalEstimate) * 100, 100)}%`,
-                            background: '#00F0FF',
-                            borderRadius: 2,
+                            background: 'linear-gradient(90deg, #00F0FF, #00A0FF)',
+                            borderRadius: 3,
+                            boxShadow: '0 0 6px rgba(0, 240, 255, 0.4)',
                           }}
                         />
                       </div>

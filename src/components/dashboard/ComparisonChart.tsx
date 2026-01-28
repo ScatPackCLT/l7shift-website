@@ -113,7 +113,7 @@ export function ComparisonChart({
             borderRadius: 8,
           }}
         >
-          <span style={{ fontSize: 20 }}>\u26A1</span>
+          <span style={{ fontSize: 20 }}>⚡</span>
           <div>
             <span
               style={{
