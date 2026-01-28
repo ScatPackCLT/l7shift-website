@@ -124,10 +124,31 @@ export default function DigitalCard() {
   const params = useParams()
   const slug = params.slug as string
   const [mounted, setMounted] = useState(false)
+  const [walletLoading, setWalletLoading] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const handleGoogleWallet = async () => {
+    setWalletLoading(true)
+    try {
+      const res = await fetch(`/api/wallet/google?id=${slug}`)
+      const data = await res.json()
+
+      if (data.saveUrl) {
+        window.location.href = data.saveUrl
+      } else if (data.error === 'Google Wallet not configured') {
+        alert('Google Wallet is coming soon! Use "Save Contact" for now.')
+      } else {
+        alert('Unable to add to Google Wallet. Please try "Save Contact" instead.')
+      }
+    } catch {
+      alert('Unable to add to Google Wallet. Please try "Save Contact" instead.')
+    } finally {
+      setWalletLoading(false)
+    }
+  }
 
   const holder = cardHolders[slug]
 
@@ -254,11 +275,12 @@ export default function DigitalCard() {
               <span className="btn-glow" />
             </button>
             <button
-              onClick={() => window.open(`/api/wallet/google?id=${slug}`, '_blank')}
+              onClick={handleGoogleWallet}
               className="wallet-btn"
+              disabled={walletLoading}
             >
               <WalletIcon />
-              <span>Add to Google Wallet</span>
+              <span>{walletLoading ? 'Loading...' : 'Add to Google Wallet'}</span>
             </button>
           </div>
 
