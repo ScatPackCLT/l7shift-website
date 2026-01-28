@@ -23,7 +23,7 @@ const cardHolders: Record<string, CardHolder> = {
     company: 'L7 Shift',
     tagline: 'Digital transformation for the non-conformist.',
     email: 'ken@l7shift.com',
-    phone: '+1 (704) 555-0147',
+    phone: '(704) 839-9448',
     website: 'https://l7shift.com',
     photo: '/ken-profile.jpg',
     socials: {
@@ -31,7 +31,6 @@ const cardHolders: Record<string, CardHolder> = {
       twitter: 'https://x.com/CharlotteAgency',
       github: 'https://github.com/ScatPackCLT',
     },
-    calendly: 'https://calendly.com/l7shift',
   },
 }
 
