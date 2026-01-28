@@ -15,8 +15,8 @@ const cardHolders: Record<string, CardHolder> = {
     phone: '(704) 839-9448',
     website: 'https://l7shift.com',
     socials: {
-      linkedin: 'https://linkedin.com/in/kenleftwich',
-      twitter: 'https://x.com/CharlotteAgency',
+      linkedin: 'https://www.linkedin.com/in/kennethleftwich/',
+      twitter: 'https://x.com/KennethLeftwich',
     },
   },
 }
