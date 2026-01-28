@@ -119,17 +119,16 @@
   border-top: none;
 }
 
-/* Broken Square - Animated Gradient Marquee */
+/* Broken Square - Static Frame with Animated Gradient */
 .broken-square {
   position: absolute;
-  top: 40px;
+  top: 32px;
   left: 50%;
   transform: translateX(-50%);
-  width: 200px;
-  height: 200px;
+  width: 260px;
+  height: 220px;
   pointer-events: none;
   z-index: 1;
-  animation: squareRotate 20s linear infinite;
 }
 
 .broken-square svg {
@@ -139,13 +138,8 @@
 
 .broken-square svg path {
   stroke: url(#brokenSquareGradient);
-  stroke-width: 1.5;
-  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5));
-}
-
-@keyframes squareRotate {
-  0% { transform: translateX(-50%) rotate(0deg); }
-  100% { transform: translateX(-50%) rotate(360deg); }
+  stroke-width: 2;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.4));
 }
 
 /* Gradient animation for broken square stroke */
@@ -699,5 +693,11 @@
 
   .avatar-inner {
     font-size: 24px;
+  }
+
+  .broken-square {
+    width: 220px;
+    height: 190px;
+    top: 28px;
   }
 }
