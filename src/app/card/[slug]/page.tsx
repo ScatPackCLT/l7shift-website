@@ -221,7 +221,7 @@ export default function DigitalCard() {
           </h1>
 
           {/* Title */}
-          <p className="title">{holder.title}</p>
+          <p className="title" data-text={holder.title}>{holder.title}</p>
 
           {/* Company */}
           <p className="company">{holder.company}</p>

@@ -372,12 +372,55 @@
 }
 
 /* Title */
+/* Title with glitch and gradient burst */
 .title {
-  font-size: 14px;
-  font-weight: 500;
+  position: relative;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 8px 0;
+  padding: 8px 16px;
+  background: linear-gradient(135deg,
+    rgba(0, 240, 255, 0.1) 0%,
+    rgba(255, 0, 170, 0.1) 50%,
+    rgba(191, 255, 0, 0.1) 100%
+  );
+  border: 1px solid transparent;
+  border-image: linear-gradient(90deg, var(--electric-cyan), var(--hot-magenta), var(--acid-lime)) 1;
+  color: white;
+}
+
+.title::before,
+.title::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 8px;
+  left: 16px;
+  width: calc(100% - 32px);
+  height: calc(100% - 16px);
+  opacity: 0;
+}
+
+.title::before {
   color: var(--electric-cyan);
-  margin: 0 0 4px 0;
-  letter-spacing: 0.5px;
+  animation: titleGlitch 4s ease-in-out infinite;
+  clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+}
+
+.title::after {
+  color: var(--hot-magenta);
+  animation: titleGlitch 4s ease-in-out infinite reverse;
+  animation-delay: 0.15s;
+  clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+}
+
+@keyframes titleGlitch {
+  0%, 88%, 100% { opacity: 0; transform: translate(0); }
+  89% { opacity: 0.7; transform: translate(-2px, 1px); }
+  91% { opacity: 0; transform: translate(0); }
+  93% { opacity: 0.7; transform: translate(2px, -1px); }
+  95% { opacity: 0; transform: translate(0); }
 }
 
 /* Company */
