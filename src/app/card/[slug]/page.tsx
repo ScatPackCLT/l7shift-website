@@ -4,36 +4,29 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import './card.css'
 
-// Card holder data
-const cardHolders: Record<string, CardHolder> = {
-  ken: {
-    name: 'Ken Leftwich',
-    title: 'Founder and Chief SymbAIote',
-    company: 'L7 Shift',
-    tagline: 'Digital transformation for the non-conformist.',
-    email: 'ken@l7shift.com',
-    phone: '(704) 839-9448',
-    website: 'https://l7shift.com',
-    socials: {
-      linkedin: 'https://www.linkedin.com/in/kennethleftwich/',
-      twitter: 'https://x.com/KennethLeftwich',
-    },
-  },
-}
-
 interface CardHolder {
+  id: string
+  slug: string
   name: string
-  title: string
-  company: string
-  tagline: string
-  email: string
-  phone: string
-  website: string
+  title: string | null
+  company: string | null
+  tagline: string | null
+  email: string | null
+  phone: string | null
+  website: string | null
+  bio: string | null
+  avatar_type: 'initials' | 'photo'
+  avatar_url: string | null
   socials: {
     linkedin?: string
     twitter?: string
     github?: string
+    instagram?: string
   }
+  theme: string
+  tier: string
+  animations_enabled: boolean
+  show_branding: boolean
 }
 
 // Generate vCard for download with all proper fields
@@ -44,22 +37,22 @@ function downloadVCard(holder: CardHolder) {
   const firstName = nameParts.join(' ')
 
   // Format phone for TEL field (remove formatting)
-  const phoneClean = holder.phone.replace(/[^\d+]/g, '')
+  const phoneClean = holder.phone?.replace(/[^\d+]/g, '') || ''
 
   const vcard = [
     'BEGIN:VCARD',
     'VERSION:3.0',
     `N:${lastName};${firstName};;;`,
     `FN:${holder.name}`,
-    `ORG:${holder.company}`,
-    `TITLE:${holder.title}`,
-    `TEL;TYPE=WORK,VOICE:${phoneClean}`,
-    `EMAIL;TYPE=WORK,INTERNET:${holder.email}`,
-    `URL;TYPE=WORK:${holder.website}`,
-    holder.socials.linkedin ? `X-SOCIALPROFILE;TYPE=linkedin:${holder.socials.linkedin}` : '',
-    holder.socials.twitter ? `X-SOCIALPROFILE;TYPE=twitter:${holder.socials.twitter}` : '',
-    holder.socials.github ? `URL;TYPE=github:${holder.socials.github}` : '',
-    `NOTE:${holder.tagline}`,
+    holder.company ? `ORG:${holder.company}` : '',
+    holder.title ? `TITLE:${holder.title}` : '',
+    phoneClean ? `TEL;TYPE=WORK,VOICE:${phoneClean}` : '',
+    holder.email ? `EMAIL;TYPE=WORK,INTERNET:${holder.email}` : '',
+    holder.website ? `URL;TYPE=WORK:${holder.website}` : '',
+    holder.socials?.linkedin ? `X-SOCIALPROFILE;TYPE=linkedin:${holder.socials.linkedin}` : '',
+    holder.socials?.twitter ? `X-SOCIALPROFILE;TYPE=twitter:${holder.socials.twitter}` : '',
+    holder.socials?.github ? `URL;TYPE=github:${holder.socials.github}` : '',
+    holder.tagline ? `NOTE:${holder.tagline}` : '',
     'END:VCARD'
   ].filter(Boolean).join('\r\n')
 
@@ -124,10 +117,36 @@ export default function DigitalCard() {
   const slug = params.slug as string
   const [mounted, setMounted] = useState(false)
   const [walletLoading, setWalletLoading] = useState(false)
+  const [holder, setHolder] = useState<CardHolder | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+
+    // Fetch card data from Supabase API
+    async function fetchCard() {
+      try {
+        const res = await fetch(`/api/shiftcards/${slug}`)
+        if (!res.ok) {
+          if (res.status === 404) {
+            setError('not_found')
+          } else {
+            setError('error')
+          }
+          return
+        }
+        const data = await res.json()
+        setHolder(data)
+      } catch {
+        setError('error')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCard()
+  }, [slug])
 
   const handleGoogleWallet = async () => {
     setWalletLoading(true)
@@ -149,9 +168,7 @@ export default function DigitalCard() {
     }
   }
 
-  const holder = cardHolders[slug]
-
-  if (!mounted) {
+  if (!mounted || loading) {
     return (
       <div className="card-page">
         <div style={{ color: '#888' }}>Loading...</div>
@@ -159,10 +176,19 @@ export default function DigitalCard() {
     )
   }
 
-  if (!holder) {
+  if (error === 'not_found' || !holder) {
     return (
       <div className="card-page">
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111' }}>Card not found</h1>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="card-page">
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111' }}>Unable to load card</h1>
+        <p style={{ color: '#666', marginTop: 8 }}>Please try again later.</p>
       </div>
     )
   }
@@ -238,38 +264,40 @@ export default function DigitalCard() {
           </h1>
 
           {/* Title - highlight AI in SymbAIote */}
-          <p className="title" data-text={holder.title}>
-            {holder.title.includes('SymbAIote') ? (
-              <>
-                {holder.title.split('SymbAIote')[0]}
-                Symb<span className="title-ai">AI</span>ote
-                {holder.title.split('SymbAIote')[1]}
-              </>
-            ) : holder.title}
-          </p>
+          {holder.title && (
+            <p className="title" data-text={holder.title}>
+              {holder.title.includes('SymbAIote') ? (
+                <>
+                  {holder.title.split('SymbAIote')[0]}
+                  Symb<span className="title-ai">AI</span>ote
+                  {holder.title.split('SymbAIote')[1]}
+                </>
+              ) : holder.title}
+            </p>
+          )}
 
           {/* Company */}
-          <p className="company">{holder.company}</p>
+          {holder.company && <p className="company">{holder.company}</p>}
 
           {/* Tagline */}
-          <p className="tagline">"{holder.tagline}"</p>
+          {holder.tagline && <p className="tagline">"{holder.tagline}"</p>}
 
           {/* Divider */}
           <div className="divider" />
 
           {/* Social Icons */}
           <div className="socials">
-            {holder.socials.linkedin && (
+            {holder.socials?.linkedin && (
               <a href={holder.socials.linkedin} target="_blank" rel="noopener noreferrer" className="social-icon">
                 <LinkedInIcon />
               </a>
             )}
-            {holder.socials.twitter && (
+            {holder.socials?.twitter && (
               <a href={holder.socials.twitter} target="_blank" rel="noopener noreferrer" className="social-icon">
                 <XIcon />
               </a>
             )}
-            {holder.socials.github && (
+            {holder.socials?.github && (
               <a href={holder.socials.github} target="_blank" rel="noopener noreferrer" className="social-icon">
                 <GitHubIcon />
               </a>
@@ -278,18 +306,24 @@ export default function DigitalCard() {
 
           {/* Contact Links */}
           <div className="contacts">
-            <a href={`mailto:${holder.email}`} className="contact-link">
-              <span className="contact-icon cyan"><EmailIcon /></span>
-              <span>{holder.email}</span>
-            </a>
-            <a href={`tel:${holder.phone}`} className="contact-link">
-              <span className="contact-icon magenta"><PhoneIcon /></span>
-              <span>{holder.phone}</span>
-            </a>
-            <a href={holder.website} target="_blank" rel="noopener noreferrer" className="contact-link">
-              <span className="contact-icon lime"><WebIcon /></span>
-              <span>{holder.website.replace('https://', '')}</span>
-            </a>
+            {holder.email && (
+              <a href={`mailto:${holder.email}`} className="contact-link">
+                <span className="contact-icon cyan"><EmailIcon /></span>
+                <span>{holder.email}</span>
+              </a>
+            )}
+            {holder.phone && (
+              <a href={`tel:${holder.phone}`} className="contact-link">
+                <span className="contact-icon magenta"><PhoneIcon /></span>
+                <span>{holder.phone}</span>
+              </a>
+            )}
+            {holder.website && (
+              <a href={holder.website} target="_blank" rel="noopener noreferrer" className="contact-link">
+                <span className="contact-icon lime"><WebIcon /></span>
+                <span>{holder.website.replace('https://', '')}</span>
+              </a>
+            )}
           </div>
 
           {/* Action Buttons */}

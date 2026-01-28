@@ -495,3 +495,60 @@ export type Sprint = Database['public']['Tables']['sprints']['Row']
 export type Deliverable = Database['public']['Tables']['deliverables']['Row']
 export type RequirementDoc = Database['public']['Tables']['requirements_docs']['Row']
 export type ActivityLogEntry = Database['public']['Tables']['activity_log']['Row']
+
+// ShiftCards types
+export type ShiftCardTier = 'basic' | 'pro' | 'custom'
+export type ShiftCardAvatarType = 'initials' | 'photo'
+export type ShiftCardEventType = 'view' | 'save' | 'click'
+
+export interface ShiftCard {
+  id: string
+  user_id: string | null
+  slug: string
+  tier: ShiftCardTier
+  theme: string
+  name: string
+  title: string | null
+  company: string | null
+  email: string | null
+  phone: string | null
+  website: string | null
+  tagline: string | null
+  bio: string | null
+  avatar_type: ShiftCardAvatarType
+  avatar_url: string | null
+  socials: {
+    linkedin?: string
+    twitter?: string
+    github?: string
+    instagram?: string
+  }
+  custom_domain: string | null
+  accent_color: string | null
+  show_branding: boolean
+  animations_enabled: boolean
+  custom_css: string | null
+  published: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShiftCardUser {
+  id: string
+  email: string
+  password_hash: string | null
+  tier: ShiftCardTier | null
+  stripe_customer_id: string | null
+  created_at: string
+}
+
+export interface ShiftCardAnalytics {
+  id: string
+  card_id: string
+  event_type: ShiftCardEventType
+  click_target: string | null
+  referrer: string | null
+  user_agent: string | null
+  ip_hash: string | null
+  created_at: string
+}

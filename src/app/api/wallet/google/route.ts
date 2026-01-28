@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { SignJWT, importPKCS8 } from 'jose'
+import { createClient } from '@supabase/supabase-js'
 import {
   generateGooglePassObject,
   generateGooglePassClass,
@@ -14,25 +15,8 @@ import {
   type CardHolder,
 } from '@/lib/wallet-templates'
 
-// Card holder data - will move to Supabase later
-const cardHolders: Record<string, CardHolder> = {
-  ken: {
-    id: 'ken',
-    name: 'Ken Leftwich',
-    title: 'Founder & Chief Architect',
-    company: 'L7 Shift',
-    tagline: 'Digital transformation for the non-conformist.',
-    email: 'ken@l7shift.com',
-    phone: '(704) 839-9448',
-    website: 'https://l7shift.com',
-    socials: {
-      linkedin: 'https://linkedin.com/in/kenleftwich',
-      twitter: 'https://x.com/CharlotteAgency',
-      github: 'https://github.com/ScatPackCLT',
-    },
-    themeId: 'l7-shift',
-  },
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 /**
  * GET /api/wallet/google?id=ken
@@ -50,12 +34,41 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const holder = cardHolders[holderId]
-    if (!holder) {
+    // Fetch card from Supabase
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 503 }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const { data: cardData, error: dbError } = await supabase
+      .from('shiftcards')
+      .select('*')
+      .eq('slug', holderId)
+      .eq('published', true)
+      .single()
+
+    if (dbError || !cardData) {
       return NextResponse.json(
         { error: 'Card holder not found' },
         { status: 404 }
       )
+    }
+
+    // Map Supabase data to CardHolder format
+    const holder: CardHolder = {
+      id: cardData.slug,
+      name: cardData.name,
+      title: cardData.title || '',
+      company: cardData.company || '',
+      tagline: cardData.tagline || '',
+      email: cardData.email || '',
+      phone: cardData.phone || '',
+      website: cardData.website || '',
+      socials: cardData.socials || {},
+      themeId: cardData.theme || 'l7-shift',
     }
 
     // Check for required env vars
