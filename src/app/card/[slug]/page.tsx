@@ -8,7 +8,7 @@ import './card.css'
 const cardHolders: Record<string, CardHolder> = {
   ken: {
     name: 'Ken Leftwich',
-    title: 'Founder & Chief Architect',
+    title: 'Founder and Chief SymbAIote',
     company: 'L7 Shift',
     tagline: 'Digital transformation for the non-conformist.',
     email: 'ken@l7shift.com',
