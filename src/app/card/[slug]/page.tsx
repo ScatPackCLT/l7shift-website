@@ -225,7 +225,6 @@ export default function DigitalCard() {
   if (!mounted) {
     return (
       <div style={{
-        minHeight: '100vh',
         minHeight: '100dvh',
         background: brandColors.voidBlack,
         display: 'flex',
@@ -241,7 +240,6 @@ export default function DigitalCard() {
   if (!holder) {
     return (
       <div style={{
-        minHeight: '100vh',
         minHeight: '100dvh',
         background: brandColors.voidBlack,
         display: 'flex',
@@ -260,7 +258,6 @@ export default function DigitalCard() {
 
   return (
     <div style={{
-      minHeight: '100vh',
       minHeight: '100dvh',
       background: brandColors.voidBlack,
       display: 'flex',
