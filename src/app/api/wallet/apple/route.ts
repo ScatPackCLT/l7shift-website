@@ -21,6 +21,10 @@
  *    - APPLE_WWDR_CERT=<base64 of AppleWWDRCA.pem>
  */
 
+// Force dynamic rendering to prevent build-time bundling issues
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateAppleWalletPass, getAppleWalletConfig, SHARING_INFO } from '@/lib/apple-wallet'

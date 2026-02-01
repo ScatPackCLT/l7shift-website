@@ -17,7 +17,8 @@
  * - APPLE_WWDR_CERT: Base64-encoded WWDR certificate (or path)
  */
 
-import { PKPass } from 'passkit-generator'
+// Dynamic import to prevent build-time analysis of passkit-generator
+// This fixes the "Collecting build traces" hanging issue
 import { CardHolder, getTheme, WalletTheme } from './wallet-templates'
 import path from 'path'
 import fs from 'fs'
@@ -136,6 +137,9 @@ export async function generateAppleWalletPass(
   const serialNumber = `${holder.id}-${Date.now()}`
 
   try {
+    // Dynamic import to prevent build-time trace analysis
+    const { PKPass } = await import('passkit-generator')
+
     // Create the pass
     const pass = new PKPass(
       {},
@@ -284,7 +288,7 @@ export async function generateAppleWalletPass(
 /**
  * Add images to the pass
  */
-async function addPassImages(pass: PKPass, theme: WalletTheme, baseUrl: string): Promise<void> {
+async function addPassImages(pass: any, theme: WalletTheme, baseUrl: string): Promise<void> {
   const publicDir = path.join(process.cwd(), 'public')
 
   // Icon (required) - 29x29 @1x, 58x58 @2x, 87x87 @3x
