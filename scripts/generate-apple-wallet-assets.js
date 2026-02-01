@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Generate Apple Wallet image assets for ShiftCards
+ * Generate Wallet image assets for ShiftCards
  *
- * Creates required images:
+ * Apple Wallet:
  * - icon.png (29x29 @1x, 58x58 @2x, 87x87 @3x)
  * - logo.png (160x50 @1x, 320x100 @2x)
  * - strip.png (375x123 @1x, 750x246 @2x)
+ * - thumbnail.png (90x90 @1x, 180x180 @2x)
+ *
+ * Google Wallet:
+ * - logo-google.png (660x660 with circular safe zone)
+ * - hero.png (1032x336)
  *
  * Usage: node scripts/generate-apple-wallet-assets.js
  */
@@ -84,7 +89,8 @@ async function generateIcons() {
 }
 
 /**
- * Generate logo images (L7 SHIFT text)
+ * Generate logo - SHIFTCARDS™ in bold gradient (like JJ Rewards)
+ * Sized to fill the space properly
  */
 async function generateLogos() {
   const sizes = [
@@ -93,13 +99,32 @@ async function generateLogos() {
   ]
 
   for (const { name, width, height } of sizes) {
-    const fontSize = Math.floor(height * 0.45)
+    // Size to fit "SHIFTCARDS™" across the width
+    const mainFontSize = Math.floor(width / 6.5)  // ~49px for 320w, fits nicely
+    const tmFontSize = Math.floor(mainFontSize * 0.4)
+
     const svg = `
       <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-        <text x="${width / 2}" y="${height * 0.65}"
+        <defs>
+          <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:${COLORS.electricCyan};stop-opacity:1" />
+            <stop offset="45%" style="stop-color:${COLORS.hotMagenta};stop-opacity:1" />
+            <stop offset="100%" style="stop-color:${COLORS.acidLime};stop-opacity:1" />
+          </linearGradient>
+          <filter id="logoGlow" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <!-- SHIFTCARDS™ - bold gradient, properly spaced -->
+        <text x="0" y="${height * 0.72}"
               font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
-              font-size="${fontSize}" font-weight="bold"
-              fill="${COLORS.white}" text-anchor="middle">L7 SHIFT</text>
+              font-size="${mainFontSize}" font-weight="800"
+              fill="url(#logoGradient)" filter="url(#logoGlow)"
+              letter-spacing="-1">SHIFTCARDS<tspan font-size="${tmFontSize}" baseline-shift="super" fill="${COLORS.white}">™</tspan></text>
       </svg>
     `
 
@@ -275,17 +300,207 @@ async function generateThumbnail() {
   }
 }
 
+// =============================================================================
+// GOOGLE WALLET ASSETS
+// =============================================================================
+
+/**
+ * Generate Google Wallet logo (660x660)
+ * Content should stay within circular safe zone
+ * Design: "L7" mark with gradient ring, matching Apple thumbnail style
+ */
+async function generateGoogleLogo() {
+  const size = 660
+  const safeRadius = size * 0.4  // Keep content in center 80%
+  const ringWidth = Math.floor(size / 15)  // Bold ring
+  const fontSize = Math.floor(size * 0.28)
+
+  const svg = `
+    <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Gradient ring -->
+        <linearGradient id="googleRing" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${COLORS.electricCyan};stop-opacity:1" />
+          <stop offset="33%" style="stop-color:${COLORS.hotMagenta};stop-opacity:1" />
+          <stop offset="66%" style="stop-color:${COLORS.acidLime};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${COLORS.electricCyan};stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="textGradGoogle" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${COLORS.electricCyan};stop-opacity:1" />
+          <stop offset="50%" style="stop-color:${COLORS.hotMagenta};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${COLORS.acidLime};stop-opacity:1" />
+        </linearGradient>
+        <filter id="googleGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="${ringWidth * 0.6}" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <!-- Subtle corner glows -->
+        <radialGradient id="glowTL" cx="20%" cy="20%" r="50%">
+          <stop offset="0%" style="stop-color:${COLORS.electricCyan};stop-opacity:0.15" />
+          <stop offset="100%" style="stop-color:${COLORS.electricCyan};stop-opacity:0" />
+        </radialGradient>
+        <radialGradient id="glowBR" cx="80%" cy="80%" r="50%">
+          <stop offset="0%" style="stop-color:${COLORS.hotMagenta};stop-opacity:0.12" />
+          <stop offset="100%" style="stop-color:${COLORS.hotMagenta};stop-opacity:0" />
+        </radialGradient>
+      </defs>
+
+      <!-- Background -->
+      <rect width="${size}" height="${size}" fill="${COLORS.voidBlack}"/>
+
+      <!-- Corner glows -->
+      <rect width="${size}" height="${size}" fill="url(#glowTL)"/>
+      <rect width="${size}" height="${size}" fill="url(#glowBR)"/>
+
+      <!-- Outer glow ring -->
+      <circle cx="${size / 2}" cy="${size / 2}" r="${safeRadius}"
+              fill="none" stroke="url(#googleRing)" stroke-width="${ringWidth}"
+              filter="url(#googleGlow)"/>
+
+      <!-- Inner dark circle -->
+      <circle cx="${size / 2}" cy="${size / 2}" r="${safeRadius - ringWidth * 1.5}"
+              fill="${COLORS.voidBlack}"/>
+
+      <!-- L7 text - bold gradient -->
+      <text x="${size / 2}" y="${size * 0.56}"
+            font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+            font-size="${fontSize}" font-weight="800"
+            fill="url(#textGradGoogle)" text-anchor="middle"
+            filter="url(#googleGlow)">L7</text>
+    </svg>
+  `
+
+  await sharp(Buffer.from(svg))
+    .png()
+    .toFile(path.join(OUTPUT_DIR, 'logo-google.png'))
+
+  console.log(`✓ Generated logo-google.png (${size}x${size})`)
+}
+
+/**
+ * Generate Google Wallet hero image (1032x336)
+ * Full-width banner with SHIFTCARDS™ branding
+ * Matches Apple strip design aesthetic
+ */
+async function generateGoogleHero() {
+  const width = 1032
+  const height = 336
+  const borderWidth = Math.floor(width / 180)
+  const cornerLength = Math.floor(width / 12)
+  const mainFontSize = Math.floor(height * 0.28)
+  const tmFontSize = Math.floor(mainFontSize * 0.35)
+
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Main gradient for text and border -->
+        <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:${COLORS.electricCyan};stop-opacity:1" />
+          <stop offset="45%" style="stop-color:${COLORS.hotMagenta};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${COLORS.acidLime};stop-opacity:1" />
+        </linearGradient>
+
+        <!-- Border glow gradient -->
+        <linearGradient id="heroBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${COLORS.electricCyan};stop-opacity:1" />
+          <stop offset="50%" style="stop-color:${COLORS.hotMagenta};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${COLORS.acidLime};stop-opacity:1" />
+        </linearGradient>
+
+        <!-- Glow filter -->
+        <filter id="heroGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="${borderWidth * 1.5}" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+
+        <!-- Corner glows -->
+        <radialGradient id="heroGlowTL" cx="0%" cy="0%" r="60%">
+          <stop offset="0%" style="stop-color:${COLORS.electricCyan};stop-opacity:0.2" />
+          <stop offset="100%" style="stop-color:${COLORS.electricCyan};stop-opacity:0" />
+        </radialGradient>
+        <radialGradient id="heroGlowBR" cx="100%" cy="100%" r="60%">
+          <stop offset="0%" style="stop-color:${COLORS.hotMagenta};stop-opacity:0.15" />
+          <stop offset="100%" style="stop-color:${COLORS.hotMagenta};stop-opacity:0" />
+        </radialGradient>
+
+        <!-- Subtle grid -->
+        <pattern id="heroGrid" width="${Math.floor(width/25)}" height="${Math.floor(width/25)}" patternUnits="userSpaceOnUse">
+          <path d="M ${Math.floor(width/25)} 0 L 0 0 0 ${Math.floor(width/25)}" fill="none" stroke="${COLORS.electricCyan}" stroke-width="0.5" stroke-opacity="0.06"/>
+        </pattern>
+      </defs>
+
+      <!-- Base background -->
+      <rect width="100%" height="100%" fill="${COLORS.voidBlack}"/>
+
+      <!-- Corner glows -->
+      <rect width="100%" height="100%" fill="url(#heroGlowTL)"/>
+      <rect width="100%" height="100%" fill="url(#heroGlowBR)"/>
+
+      <!-- Subtle grid overlay -->
+      <rect width="100%" height="100%" fill="url(#heroGrid)"/>
+
+      <!-- Border frame with glow -->
+      <rect x="${borderWidth}" y="${borderWidth}"
+            width="${width - borderWidth * 2}" height="${height - borderWidth * 2}"
+            fill="none" stroke="url(#heroBorder)" stroke-width="${borderWidth * 1.5}"
+            rx="${borderWidth * 2}" ry="${borderWidth * 2}"
+            filter="url(#heroGlow)" opacity="0.8"/>
+
+      <!-- Corner accents - top left (cyan) -->
+      <path d="M ${cornerLength} ${borderWidth * 2} L ${borderWidth * 2} ${borderWidth * 2} L ${borderWidth * 2} ${cornerLength}"
+            fill="none" stroke="${COLORS.electricCyan}" stroke-width="${borderWidth * 1.5}" stroke-linecap="square"/>
+
+      <!-- Corner accents - top right (magenta) -->
+      <path d="M ${width - cornerLength} ${borderWidth * 2} L ${width - borderWidth * 2} ${borderWidth * 2} L ${width - borderWidth * 2} ${cornerLength}"
+            fill="none" stroke="${COLORS.hotMagenta}" stroke-width="${borderWidth * 1.5}" stroke-linecap="square"/>
+
+      <!-- Corner accents - bottom left (lime) -->
+      <path d="M ${borderWidth * 2} ${height - cornerLength} L ${borderWidth * 2} ${height - borderWidth * 2} L ${cornerLength} ${height - borderWidth * 2}"
+            fill="none" stroke="${COLORS.acidLime}" stroke-width="${borderWidth * 1.5}" stroke-linecap="square"/>
+
+      <!-- Corner accents - bottom right (cyan) -->
+      <path d="M ${width - borderWidth * 2} ${height - cornerLength} L ${width - borderWidth * 2} ${height - borderWidth * 2} L ${width - cornerLength} ${height - borderWidth * 2}"
+            fill="none" stroke="${COLORS.electricCyan}" stroke-width="${borderWidth * 1.5}" stroke-linecap="square"/>
+
+      <!-- SHIFTCARDS™ text - centered, bold gradient -->
+      <text x="${width / 2}" y="${height * 0.62}"
+            font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+            font-size="${mainFontSize}" font-weight="800"
+            fill="url(#heroGradient)" text-anchor="middle"
+            filter="url(#heroGlow)"
+            letter-spacing="2">SHIFTCARDS<tspan font-size="${tmFontSize}" baseline-shift="super" fill="${COLORS.white}">™</tspan></text>
+    </svg>
+  `
+
+  await sharp(Buffer.from(svg))
+    .png()
+    .toFile(path.join(OUTPUT_DIR, 'hero.png'))
+
+  console.log(`✓ Generated hero.png (${width}x${height})`)
+}
+
 async function main() {
-  console.log('\n🎴 Generating Apple Wallet assets for L7 Shift...\n')
+  console.log('\n🎴 Generating Wallet assets for L7 Shift ShiftCards...\n')
 
   await ensureDir(OUTPUT_DIR)
 
+  console.log('--- Apple Wallet ---')
   await generateIcons()
   await generateLogos()
   await generateStrips()
   await generateThumbnail()
 
-  console.log('\n✅ All Apple Wallet assets generated!')
+  console.log('\n--- Google Wallet ---')
+  await generateGoogleLogo()
+  await generateGoogleHero()
+
+  console.log('\n✅ All wallet assets generated!')
   console.log(`📁 Output directory: ${OUTPUT_DIR}\n`)
 }
 
