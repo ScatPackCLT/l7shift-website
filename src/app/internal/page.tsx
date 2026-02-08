@@ -12,7 +12,7 @@ import {
   InsightCard,
   MetricCard,
   VelocitySparkline,
-  ComparisonChart,
+  SpeedGauge,
   ActivityFeed,
 } from '@/components/dashboard'
 
@@ -420,7 +420,7 @@ export default function InternalDashboard() {
                   >
                     SymbAIotic Shift™ Impact
                   </h3>
-                  <ComparisonChart
+                  <SpeedGauge
                     shiftHours={totalShiftHours}
                     traditionalHours={totalTraditionalHours}
                     size="lg"

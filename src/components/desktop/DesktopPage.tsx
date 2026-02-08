@@ -9,6 +9,7 @@ import { CustomCursor } from './CustomCursor'
 import { Navigation } from './Navigation'
 import { HeroSection } from './HeroSection'
 import { MarqueeSection } from './MarqueeSection'
+import { StatsTickerSection } from './StatsTickerSection'
 import { ProblemSection } from './ProblemSection'
 import { ServicesSection } from './ServicesSection'
 import { ProcessSection } from './ProcessSection'
@@ -49,6 +50,9 @@ export function DesktopPage() {
 
       {/* Marquee Section */}
       <MarqueeSection />
+
+      {/* Live Stats Ticker */}
+      <StatsTickerSection />
 
       {/* Problem Section */}
       <ProblemSection onHoverStart={handleHoverStart} onHoverEnd={handleHoverEnd} />

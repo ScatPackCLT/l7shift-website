@@ -5,6 +5,7 @@ import { useContactForm } from '@/hooks/useContactForm'
 import { MobileHeader } from './MobileHeader'
 import { MobileMenuOverlay } from './MobileMenuOverlay'
 import { MobileHero } from './MobileHero'
+import { MobileStatsTicker } from './MobileStatsTicker'
 import { MobileServices } from './MobileServices'
 import { MobileProcess } from './MobileProcess'
 import { MobileCaseStudy } from './MobileCaseStudy'
@@ -32,6 +33,9 @@ export function MobilePage() {
 
       {/* Hero Section */}
       <MobileHero />
+
+      {/* Live Stats Ticker */}
+      <MobileStatsTicker />
 
       {/* Services Section */}
       <MobileServices />
