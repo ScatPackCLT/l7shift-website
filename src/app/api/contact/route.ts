@@ -89,7 +89,6 @@ export async function POST(request: NextRequest) {
             source: 'website',
             status: 'incoming',
             tier: null,
-            answers: null,
             ai_assessment: null,
           })
           .select()
