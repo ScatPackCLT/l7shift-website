@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import type { LeadInsert, LeadStatus, LeadTier, LeadSource } from '@/lib/database.types'
+import type { LeadStatus, LeadTier, LeadSource } from '@/lib/database.types'
 
 // Valid enum values for validation
 const VALID_STATUSES: LeadStatus[] = ['incoming', 'qualified', 'contacted', 'converted', 'disqualified']
@@ -138,16 +138,15 @@ export async function POST(request: NextRequest) {
     const leadSource: LeadSource = source && VALID_SOURCES.includes(source) ? source : 'website'
 
     // Prepare lead data
-    const leadData: LeadInsert = {
+    const leadData = {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       company: company?.trim() || null,
       phone: phone?.trim() || null,
       message: message?.trim() || null,
       source: leadSource,
-      status: 'incoming',
+      status: 'incoming' as const,
       tier: null,
-      answers: answers || null,
       ai_assessment: null
     }
 

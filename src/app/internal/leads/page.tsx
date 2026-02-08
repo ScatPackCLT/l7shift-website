@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 
 // Lead types (matches Supabase leads table)
 type LeadStatus = 'incoming' | 'qualified' | 'contacted' | 'nurturing' | 'converted' | 'disqualified'
@@ -78,22 +77,14 @@ export default function LeadsPage() {
   }, [])
 
   async function fetchLeads() {
-    if (!supabase) {
-      console.error('Supabase client not initialized')
-      setLoading(false)
-      return
-    }
-
-    const db = supabase as any
-
     try {
-      const { data, error } = await db
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setLeads(data || [])
+      const res = await fetch('/api/leads')
+      const json = await res.json()
+      if (json.success && json.data) {
+        setLeads(json.data)
+      } else {
+        console.error('Error fetching leads:', json.error)
+      }
     } catch (error) {
       console.error('Error fetching leads:', error)
     } finally {
@@ -547,23 +538,17 @@ function NewLeadModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name || !email || !supabase) return
-    const db = supabase as any
+    if (!name || !email) return
 
     setSaving(true)
     try {
-      const { error } = await db.from('leads').insert({
-        name,
-        email,
-        company: company || null,
-        source,
-        status: 'incoming',
-        tier: null,
-        answers: null,
-        ai_assessment: null,
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, company: company || null, source }),
       })
-
-      if (error) throw error
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to create lead')
       onSuccess()
     } catch (error) {
       console.error('Error creating lead:', error)

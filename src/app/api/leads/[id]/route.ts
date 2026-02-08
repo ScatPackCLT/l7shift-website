@@ -8,14 +8,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import type { LeadUpdate, LeadStatus, LeadTier, Json } from '@/lib/database.types'
+import type { LeadStatus, LeadTier, Json } from '@/lib/database.types'
 
 // Valid enum values for validation
 const VALID_STATUSES: LeadStatus[] = ['incoming', 'qualified', 'contacted', 'converted', 'disqualified']
 const VALID_TIERS: LeadTier[] = ['SOFTBALL', 'MEDIUM', 'HARD', 'DISQUALIFY']
 
-// UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+// ID validation - accepts integers or UUIDs
+const VALID_ID = /^(\d+|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i
 
 /**
  * GET /api/leads/[id]
@@ -29,7 +29,7 @@ export async function GET(
     const { id } = await params
 
     // Validate UUID format
-    if (!UUID_REGEX.test(id)) {
+    if (!VALID_ID.test(id)) {
       return NextResponse.json(
         { error: 'Invalid lead ID format' },
         { status: 400 }
@@ -87,7 +87,7 @@ export async function PATCH(
     const { id } = await params
 
     // Validate UUID format
-    if (!UUID_REGEX.test(id)) {
+    if (!VALID_ID.test(id)) {
       return NextResponse.json(
         { error: 'Invalid lead ID format' },
         { status: 400 }
@@ -98,7 +98,7 @@ export async function PATCH(
     const body = await request.json()
 
     // Build update object with validation
-    const updateData: LeadUpdate = {}
+    const updateData: Record<string, unknown> = {}
     let hasUpdates = false
 
     // Validate and add status if provided
@@ -175,18 +175,6 @@ export async function PATCH(
 
     if (body.message !== undefined) {
       updateData.message = body.message?.trim() || null
-      hasUpdates = true
-    }
-
-    // Add answers if provided (JSON object)
-    if (body.answers !== undefined) {
-      if (body.answers !== null && typeof body.answers !== 'object') {
-        return NextResponse.json(
-          { error: 'answers must be an object or null' },
-          { status: 400 }
-        )
-      }
-      updateData.answers = body.answers as Json
       hasUpdates = true
     }
 
@@ -268,7 +256,7 @@ export async function DELETE(
     const { id } = await params
 
     // Validate UUID format
-    if (!UUID_REGEX.test(id)) {
+    if (!VALID_ID.test(id)) {
       return NextResponse.json(
         { error: 'Invalid lead ID format' },
         { status: 400 }

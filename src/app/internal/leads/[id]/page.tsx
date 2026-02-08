@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 
 // Lead types (matches Supabase leads table)
 type LeadStatus = 'incoming' | 'qualified' | 'contacted' | 'nurturing' | 'converted' | 'disqualified'
@@ -110,23 +109,14 @@ export default function LeadDetailPage() {
   }, [leadId])
 
   async function fetchLead() {
-    if (!supabase) {
-      console.error('Supabase client not initialized')
-      setLoading(false)
-      return
-    }
-
-    const db = supabase as any
-
     try {
-      const { data, error } = await db
-        .from('leads')
-        .select('*')
-        .eq('id', leadId)
-        .single()
-
-      if (error) throw error
-      setLead(data)
+      const res = await fetch(`/api/leads/${leadId}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        setLead(json.data)
+      } else {
+        console.error('Error fetching lead:', json.error)
+      }
     } catch (error) {
       console.error('Error fetching lead:', error)
     } finally {
@@ -135,18 +125,18 @@ export default function LeadDetailPage() {
   }
 
   async function updateLead(updates: Partial<Lead>) {
-    if (!supabase || !lead) return
+    if (!lead) return
 
-    const db = supabase as any
     setSaving(true)
 
     try {
-      const { error } = await db
-        .from('leads')
-        .update(updates)
-        .eq('id', lead.id)
-
-      if (error) throw error
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to update lead')
       setLead({ ...lead, ...updates })
       setEditingStatus(false)
       setEditingTier(false)
