@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { TimeTracker } from '@/components/shared/TimeTracker'
 
 export const metadata: Metadata = {
   title: 'L7 Shift | Strategy. Systems. Solutions.',
@@ -27,7 +28,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <TimeTracker />
+      </body>
     </html>
   )
 }

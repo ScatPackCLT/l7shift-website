@@ -1,146 +1,145 @@
 'use client'
 
-import { useState } from 'react'
-import { VelocitySparkline, MetricCard } from '@/components/dashboard'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import { VelocitySparkline } from '@/components/dashboard'
+import { SpeedGauge } from '@/components/dashboard'
 
-// Mock metrics data
-const overallMetrics = {
-  totalShiftHours: 18.5,
-  totalTraditionalEstimate: 260,
-  tasksShipped: 45,
-  activeProjects: 2,
-  clientSatisfaction: 98,
-  avgDeliverySpeed: 90, // % faster than traditional
+interface MasterStats {
+  hoursSaved: number
+  multiplier: number
+  projectsCompleted: number
+  totalShiftHours: number
+  totalTraditionalHours: number
 }
 
-const projectMetrics = [
-  {
-    id: '1',
-    name: 'Scat Pack CLT',
-    shiftHours: 12.5,
-    traditionalEstimate: 120,
-    tasksShipped: 35,
-    tasksTotal: 45,
-    velocity: [2, 3, 4, 3, 5, 4, 6, 5, 3, 4, 5, 6, 4, 3],
-  },
-  {
-    id: '2',
-    name: 'Pretty Paid Closet',
-    shiftHours: 6,
-    traditionalEstimate: 80,
-    tasksShipped: 10,
-    tasksTotal: 28,
-    velocity: [1, 2, 1, 3, 2, 3, 2, 1, 2, 3, 2, 1, 2, 3],
-  },
-  {
-    id: '3',
-    name: 'Stitchwichs',
-    shiftHours: 0,
-    traditionalEstimate: 60,
-    tasksShipped: 0,
-    tasksTotal: 0,
-    velocity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  },
-]
-
-const weeklyVelocity = [12, 18, 15, 22, 19, 25, 21, 28, 24, 30, 26, 32, 28, 35]
+interface ProjectMetric {
+  id: string
+  name: string
+  shiftHours: number
+  traditionalEstimate: number
+  tasksShipped: number
+  tasksTotal: number
+  savings: number
+  completion: number
+}
 
 export default function MetricsPage() {
-  const [timeRange, setTimeRange] = useState<'7d' | '14d' | '30d' | 'all'>('14d')
+  const [stats, setStats] = useState<MasterStats | null>(null)
+  const [projects, setProjects] = useState<ProjectMetric[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const savingsPercentage = Math.round(
-    ((overallMetrics.totalTraditionalEstimate - overallMetrics.totalShiftHours) /
-      overallMetrics.totalTraditionalEstimate) *
-      100
-  )
+  useEffect(() => {
+    async function fetchData() {
+      // Fetch master stats from the single source of truth
+      const statsRes = await fetch('/api/metrics/public')
+      const masterStats = await statsRes.json()
+      setStats(masterStats)
+
+      // Fetch per-project breakdown from Supabase
+      if (!supabase) { setLoading(false); return }
+
+      const { data: projectList } = await (supabase as ReturnType<typeof Object>)
+        .from('projects')
+        .select('id, name, status')
+        .in('status', ['active', 'completed'])
+
+      if (projectList) {
+        const projectMetrics: ProjectMetric[] = []
+
+        for (const project of projectList) {
+          const { data: tasks } = await (supabase as ReturnType<typeof Object>)
+            .from('tasks')
+            .select('shift_hours, traditional_hours_estimate, status')
+            .eq('project_id', project.id)
+
+          const taskList = tasks || []
+          const shiftHours = taskList.reduce((s: number, t: { shift_hours: number | null }) => s + (t.shift_hours || 0), 0)
+          const traditionalEstimate = taskList.reduce((s: number, t: { traditional_hours_estimate: number | null }) => s + (t.traditional_hours_estimate || 0), 0)
+          const tasksShipped = taskList.filter((t: { status: string }) => t.status === 'shipped').length
+          const tasksTotal = taskList.length
+          const savings = traditionalEstimate > 0
+            ? Math.round(((traditionalEstimate - shiftHours) / traditionalEstimate) * 100)
+            : 0
+          const completion = tasksTotal > 0
+            ? Math.round((tasksShipped / tasksTotal) * 100)
+            : 0
+
+          projectMetrics.push({
+            id: project.id,
+            name: project.name,
+            shiftHours: Math.round(shiftHours * 10) / 10,
+            traditionalEstimate: Math.round(traditionalEstimate),
+            tasksShipped,
+            tasksTotal,
+            savings,
+            completion,
+          })
+        }
+
+        setProjects(projectMetrics)
+      }
+
+      setLoading(false)
+    }
+
+    fetchData()
+  }, [])
+
+  const savingsPercentage = stats && stats.totalTraditionalHours > 0
+    ? Math.round(((stats.totalTraditionalHours - stats.totalShiftHours) / stats.totalTraditionalHours) * 100)
+    : 0
+
+  const businessDaysSaved = stats ? Math.round(stats.hoursSaved / 8) : 0
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '60px 0', textAlign: 'center' }}>
+        <div style={{ color: '#888', fontSize: 14 }}>Loading metrics...</div>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto', paddingBottom: 60 }}>
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 32,
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              fontWeight: 700,
-              color: '#FAFAFA',
-              fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-            }}
-          >
-            Metrics
-          </h1>
-          <p style={{ margin: '8px 0 0', color: '#888', fontSize: 14 }}>
-            The SymbAIotic Method™ performance analytics
-          </p>
-        </div>
-
-        {/* Time Range Filter */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['7d', '14d', '30d', 'all'] as const).map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              style={{
-                padding: '8px 16px',
-                background: timeRange === range ? 'rgba(0, 240, 255, 0.1)' : 'transparent',
-                border: timeRange === range ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 6,
-                color: timeRange === range ? '#00F0FF' : '#888',
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 500,
-              }}
-            >
-              {range === 'all' ? 'All Time' : range}
-            </button>
-          ))}
-        </div>
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{
+          margin: 0, fontSize: 28, fontWeight: 700, color: '#FAFAFA',
+          fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+        }}>
+          Metrics
+        </h1>
+        <p style={{ margin: '8px 0 0', color: '#888', fontSize: 14 }}>
+          The SymbAIotic Shift™ performance analytics — real-time data
+        </p>
       </div>
 
-      {/* Hero Stats */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 20,
-          marginBottom: 32,
-        }}
-      >
-        <div
-          style={{
-            padding: 24,
-            background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(255, 0, 170, 0.1))',
-            border: '1px solid rgba(0, 240, 255, 0.2)',
-            borderRadius: 16,
-          }}
-        >
+      {/* Hero Stats - from master source */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 32 }}>
+        <div style={{
+          padding: 24,
+          background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(255, 0, 170, 0.1))',
+          border: '1px solid rgba(0, 240, 255, 0.2)',
+          borderRadius: 16,
+        }}>
           <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Total Shift Hours
           </div>
           <div style={{ fontSize: 36, fontWeight: 700, color: '#00F0FF' }}>
-            {overallMetrics.totalShiftHours}h
+            {stats?.totalShiftHours || 0}h
           </div>
           <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-            vs {overallMetrics.totalTraditionalEstimate}h traditional
+            vs {stats?.totalTraditionalHours || 0}h traditional
           </div>
         </div>
 
-        <div
-          style={{
-            padding: 24,
-            background: 'rgba(191, 255, 0, 0.05)',
-            border: '1px solid rgba(191, 255, 0, 0.2)',
-            borderRadius: 16,
-          }}
-        >
+        <div style={{
+          padding: 24,
+          background: 'rgba(191, 255, 0, 0.05)',
+          border: '1px solid rgba(191, 255, 0, 0.2)',
+          borderRadius: 16,
+        }}>
           <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Time Savings
           </div>
@@ -148,94 +147,60 @@ export default function MetricsPage() {
             {savingsPercentage}%
           </div>
           <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-            faster than traditional
+            {stats?.multiplier || 1}x faster than traditional
           </div>
         </div>
 
-        <div
-          style={{
-            padding: 24,
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: 16,
-          }}
-        >
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Tasks Shipped
-          </div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: '#FAFAFA' }}>
-            {overallMetrics.tasksShipped}
-          </div>
-          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-            across {overallMetrics.activeProjects} active projects
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: 24,
-            background: 'rgba(255, 0, 170, 0.05)',
-            border: '1px solid rgba(255, 0, 170, 0.2)',
-            borderRadius: 16,
-          }}
-        >
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Client Satisfaction
-          </div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: '#FF00AA' }}>
-            {overallMetrics.clientSatisfaction}%
-          </div>
-          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-            based on feedback
-          </div>
-        </div>
-      </div>
-
-      {/* Velocity Chart */}
-      <div
-        style={{
+        <div style={{
           padding: 24,
           background: 'rgba(255, 255, 255, 0.03)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderRadius: 16,
-          marginBottom: 32,
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#FAFAFA' }}>
-            Overall Velocity (Tasks Shipped)
-          </h2>
-          <div style={{ fontSize: 12, color: '#888' }}>
-            Last 14 days
+        }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Hours Saved
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: '#FAFAFA' }}>
+            {stats?.hoursSaved.toLocaleString() || 0}
+          </div>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+            = {businessDaysSaved} business days
           </div>
         </div>
 
-        <div style={{ height: 120 }}>
-          <VelocitySparkline data={weeklyVelocity} color="cyan" height={120} />
+        <div style={{
+          padding: 24,
+          background: 'rgba(255, 0, 170, 0.05)',
+          border: '1px solid rgba(255, 0, 170, 0.2)',
+          borderRadius: 16,
+        }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Active Projects
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: '#FF00AA' }}>
+            {stats?.projectsCompleted || 0}
+          </div>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+            delivering results
+          </div>
         </div>
+      </div>
 
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: 16,
-            paddingTop: 16,
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-          }}
-        >
-          <div>
-            <span style={{ fontSize: 12, color: '#666' }}>Avg/Day: </span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#00F0FF' }}>3.2 tasks</span>
-          </div>
-          <div>
-            <span style={{ fontSize: 12, color: '#666' }}>Peak: </span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#BFFF00' }}>6 tasks</span>
-          </div>
-          <div>
-            <span style={{ fontSize: 12, color: '#666' }}>Trend: </span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#BFFF00' }}>↑ 15%</span>
-          </div>
-        </div>
+      {/* Speed Gauge */}
+      <div style={{
+        padding: 32,
+        background: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: 16,
+        marginBottom: 32,
+        display: 'flex',
+        justifyContent: 'center',
+      }}>
+        <SpeedGauge
+          shiftHours={stats?.totalShiftHours || 0}
+          traditionalHours={stats?.totalTraditionalHours || 0}
+          size="lg"
+        />
       </div>
 
       {/* Project Breakdown */}
@@ -244,107 +209,90 @@ export default function MetricsPage() {
       </h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {projectMetrics.map((project) => {
-          const savings = project.traditionalEstimate > 0
-            ? Math.round(((project.traditionalEstimate - project.shiftHours) / project.traditionalEstimate) * 100)
-            : 0
-          const completion = project.tasksTotal > 0
-            ? Math.round((project.tasksShipped / project.tasksTotal) * 100)
-            : 0
+        {projects.map((project) => (
+          <div key={project.id} style={{
+            padding: 24,
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 16,
+          }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600, color: '#FAFAFA' }}>
+              {project.name}
+            </h3>
 
-          return (
-            <div
-              key={project.id}
-              style={{
-                padding: 24,
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: 16,
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600, color: '#FAFAFA' }}>
-                    {project.name}
-                  </h3>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>SHIFT HOURS</div>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: '#00F0FF' }}>{project.shiftHours}h</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>TRADITIONAL EST.</div>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: '#888' }}>{project.traditionalEstimate}h</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>SAVINGS</div>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: '#BFFF00' }}>{savings}%</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>COMPLETION</div>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: '#FAFAFA' }}>{completion}%</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ width: 200, marginLeft: 32 }}>
-                  <div style={{ fontSize: 11, color: '#666', marginBottom: 8 }}>VELOCITY (14d)</div>
-                  <VelocitySparkline data={project.velocity} color="cyan" height={50} />
-                </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>SHIFT HOURS</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#00F0FF' }}>{project.shiftHours}h</div>
               </div>
-
-              {/* Progress Bar */}
-              <div style={{ marginTop: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, color: '#666' }}>Tasks Progress</span>
-                  <span style={{ fontSize: 11, color: '#888' }}>{project.tasksShipped}/{project.tasksTotal}</span>
-                </div>
-                <div
-                  style={{
-                    height: 6,
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${completion}%`,
-                      background: 'linear-gradient(90deg, #00F0FF, #BFFF00)',
-                      borderRadius: 3,
-                      transition: 'width 0.3s ease',
-                    }}
-                  />
-                </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>TRADITIONAL EST.</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#FF6B6B' }}>{project.traditionalEstimate}h</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>SAVINGS</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#BFFF00' }}>{project.savings}%</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>COMPLETION</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#FAFAFA' }}>{project.completion}%</div>
               </div>
             </div>
-          )
-        })}
+
+            {/* Progress Bar */}
+            <div style={{ marginTop: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: '#666' }}>Tasks Progress</span>
+                <span style={{ fontSize: 11, color: '#888' }}>{project.tasksShipped}/{project.tasksTotal}</span>
+              </div>
+              <div style={{
+                height: 6, background: 'rgba(255, 255, 255, 0.1)', borderRadius: 3, overflow: 'hidden',
+              }}>
+                <div style={{
+                  height: '100%', width: `${project.completion}%`,
+                  background: 'linear-gradient(90deg, #00F0FF, #BFFF00)',
+                  borderRadius: 3, transition: 'width 0.3s ease',
+                }} />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {projects.length === 0 && (
+          <div style={{
+            padding: 40, textAlign: 'center',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 16, color: '#888',
+          }}>
+            No projects with task data yet
+          </div>
+        )}
       </div>
 
-      {/* The SymbAIotic Method™ Impact Summary */}
-      <div
-        style={{
-          marginTop: 32,
-          padding: 32,
-          background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.05), rgba(255, 0, 170, 0.05))',
-          border: '1px solid rgba(0, 240, 255, 0.2)',
-          borderRadius: 16,
-          textAlign: 'center',
-        }}
-      >
-        <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          The SymbAIotic Method™ Impact
+      {/* Master Impact Summary */}
+      <div style={{
+        marginTop: 32, padding: 32,
+        background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.05), rgba(255, 0, 170, 0.05))',
+        border: '1px solid rgba(0, 240, 255, 0.2)',
+        borderRadius: 16, textAlign: 'center',
+      }}>
+        <h3 style={{
+          margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: '#888',
+          textTransform: 'uppercase', letterSpacing: '0.1em',
+        }}>
+          The SymbAIotic Shift™ Impact
         </h3>
         <div style={{ fontSize: 48, fontWeight: 700, color: '#FAFAFA', marginBottom: 8 }}>
-          {overallMetrics.totalTraditionalEstimate - overallMetrics.totalShiftHours}
+          {stats?.hoursSaved.toLocaleString() || 0}
           <span style={{ fontSize: 24, color: '#888' }}> hours saved</span>
         </div>
         <p style={{ margin: 0, fontSize: 14, color: '#888' }}>
-          That's <span style={{ color: '#BFFF00', fontWeight: 600 }}>{Math.round((overallMetrics.totalTraditionalEstimate - overallMetrics.totalShiftHours) / 8)} business days</span> of
+          That&apos;s <span style={{ color: '#BFFF00', fontWeight: 600 }}>{businessDaysSaved} business days</span> of
           development time delivered through human-AI collaboration
+        </p>
+        <p style={{ margin: '12px 0 0', fontSize: 12, color: '#555' }}>
+          Source: /api/metrics/public — master data, consistent across all pages
         </p>
       </div>
     </div>
