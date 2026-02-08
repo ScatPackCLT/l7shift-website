@@ -75,8 +75,8 @@ export function ComparisonChart({
             fontSize: sizeConfig.fontSize,
           }}
         >
-          <span style={{ color: '#888', fontWeight: 500 }}>Traditional Estimate</span>
-          <span style={{ color: '#888', fontWeight: 700 }}>{traditionalHours}h</span>
+          <span style={{ color: '#FF6B6B', fontWeight: 500 }}>Traditional Estimate</span>
+          <span style={{ color: '#FF6B6B', fontWeight: 700 }}>{traditionalHours}h</span>
         </div>
         <div
           style={{
@@ -90,9 +90,10 @@ export function ComparisonChart({
             style={{
               height: '100%',
               width: animated ? `${traditionalPercent}%` : '0%',
-              background: 'rgba(136, 136, 136, 0.5)',
+              background: 'linear-gradient(90deg, #FF6B6B 0%, #FF4444 100%)',
               borderRadius: sizeConfig.barHeight / 2,
               transition: animated ? 'width 1s ease-out 0.3s' : 'none',
+              boxShadow: '0 0 12px rgba(255, 68, 68, 0.4)',
             }}
           />
         </div>
