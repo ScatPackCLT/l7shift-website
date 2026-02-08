@@ -29,7 +29,7 @@ const mockProjectData: Record<string, {
 }> = {
   'scat-pack-clt': {
     projectName: 'Scat Pack CLT Platform',
-    clientName: 'Eric',
+    clientName: 'Ken Leftwich',
     completion: 78,
     shiftHours: 12.5,
     traditionalEstimate: 120,
