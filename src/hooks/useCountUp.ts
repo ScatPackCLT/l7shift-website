@@ -11,31 +11,35 @@ interface UseCountUpOptions {
 
 export function useCountUp({ end, duration = 2000, decimals = 0, startOnView = true }: UseCountUpOptions) {
   const [count, setCount] = useState(0)
-  const [hasStarted, setHasStarted] = useState(false)
+  const [isInView, setIsInView] = useState(false)
+  const [hasAnimated, setHasAnimated] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  // Track visibility
   useEffect(() => {
     if (!startOnView || !ref.current) {
-      if (!startOnView) setHasStarted(true)
+      setIsInView(true)
       return
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasStarted) {
-          setHasStarted(true)
+        if (entry.isIntersecting) {
+          setIsInView(true)
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.2 }
     )
 
     observer.observe(ref.current)
     return () => observer.disconnect()
-  }, [startOnView, hasStarted])
+  }, [startOnView])
 
+  // Animate when both in view AND data is ready
   useEffect(() => {
-    if (!hasStarted || end === 0) return
+    if (!isInView || end === 0 || hasAnimated) return
 
+    setHasAnimated(true)
     const startTime = Date.now()
 
     const tick = () => {
@@ -52,7 +56,7 @@ export function useCountUp({ end, duration = 2000, decimals = 0, startOnView = t
     }
 
     requestAnimationFrame(tick)
-  }, [hasStarted, end, duration, decimals])
+  }, [isInView, end, duration, decimals, hasAnimated])
 
   return { count, ref }
 }
