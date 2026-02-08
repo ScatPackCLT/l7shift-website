@@ -12,95 +12,129 @@ import {
   ComparisonChart,
   ActivityFeed,
 } from '@/components/dashboard'
-
-// Mock data - will come from Supabase based on clientSlug
-const mockProjectData: Record<string, {
-  projectName: string
-  clientName: string
-  completion: number
-  shiftHours: number
-  traditionalEstimate: number
-  phases: { name: string; status: 'completed' | 'active' | 'upcoming' }[]
-  pendingApprovals: number
-  pendingFeedback: number
-  newDeliverables: number
-  primaryColor: string
-  discoveryRequired?: boolean
-}> = {
-  'scat-pack-clt': {
-    projectName: 'Scat Pack CLT Platform',
-    clientName: 'Ken Leftwich',
-    completion: 78,
-    shiftHours: 12.5,
-    traditionalEstimate: 120,
-    phases: [
-      { name: 'Discovery', status: 'completed' },
-      { name: 'Design', status: 'completed' },
-      { name: 'Build', status: 'active' },
-      { name: 'Launch', status: 'upcoming' },
-    ],
-    pendingApprovals: 1,
-    pendingFeedback: 2,
-    newDeliverables: 3,
-    primaryColor: '#00F0FF',
-  },
-  'prettypaidcloset': {
-    projectName: 'Pretty Paid Closet Platform',
-    clientName: 'Jazz',
-    completion: 10,
-    shiftHours: 0,
-    traditionalEstimate: 0,
-    phases: [
-      { name: 'Discovery', status: 'active' },
-      { name: 'Design', status: 'upcoming' },
-      { name: 'Build', status: 'upcoming' },
-      { name: 'Launch', status: 'upcoming' },
-    ],
-    pendingApprovals: 0,
-    pendingFeedback: 0,
-    newDeliverables: 1,
-    primaryColor: '#B76E79',
-    discoveryRequired: true,
-  },
-  'stitchwichs': {
-    projectName: 'Stitchwichs Shopify',
-    clientName: 'Nicole',
-    completion: 0,
-    shiftHours: 0,
-    traditionalEstimate: 60,
-    phases: [
-      { name: 'Discovery', status: 'active' },
-      { name: 'Audit', status: 'upcoming' },
-      { name: 'Build', status: 'upcoming' },
-      { name: 'Launch', status: 'upcoming' },
-    ],
-    pendingApprovals: 0,
-    pendingFeedback: 0,
-    newDeliverables: 0,
-    primaryColor: '#8B5CF6',
-  },
-}
-
-const mockActivity = [
-  { id: '1', type: 'deliverable_uploaded' as const, title: 'Homepage Design v2', actor: 'Ken', actorType: 'internal' as const, timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-  { id: '2', type: 'task_shipped' as const, title: 'User Authentication', actor: 'Ken', actorType: 'internal' as const, timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8) },
-  { id: '3', type: 'requirement_approved' as const, title: 'Phase 1 Requirements', actor: 'Client', actorType: 'client' as const, timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24) },
-]
+import {
+  getProjectBySlug,
+  getProjectActivity,
+  transformActivityEntry,
+  CLIENT_SLUG_MAP,
+  type PortalProject,
+} from '@/lib/portal-utils'
+import type { ActivityLogEntry } from '@/lib/database.types'
 
 export default function ClientPortalDashboard() {
   const params = useParams()
   const router = useRouter()
   const clientSlug = params.clientSlug as string
+
   const [mounted, setMounted] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [portalData, setPortalData] = useState<PortalProject | null>(null)
+  const [activityItems, setActivityItems] = useState<ReturnType<typeof transformActivityEntry>[]>([])
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    loadData()
+  }, [clientSlug])
 
-  const data = mockProjectData[clientSlug] || mockProjectData['scat-pack-clt']
-  const totalActions = data.pendingApprovals + data.pendingFeedback + (data.discoveryRequired ? 1 : 0)
+  async function loadData() {
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Fetch project data
+      const projectData = await getProjectBySlug(clientSlug)
+
+      if (!projectData) {
+        setError('Project not found')
+        setLoading(false)
+        return
+      }
+
+      setPortalData(projectData)
+
+      // Fetch activity
+      const activity = await getProjectActivity(projectData.project.id, 10)
+      setActivityItems(activity.map(transformActivityEntry))
+    } catch (err) {
+      console.error('Error loading portal data:', err)
+      setError('Failed to load project data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Get config for styling fallback
+  const config = CLIENT_SLUG_MAP[clientSlug] || {
+    primaryColor: '#00F0FF',
+    accentColor: '#BFFF00',
+  }
 
   if (!mounted) return null
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60 }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            border: '3px solid rgba(255,255,255,0.1)',
+            borderTopColor: config.primaryColor,
+            borderRadius: '50%',
+            margin: '0 auto 16px',
+            animation: 'spin 1s linear infinite',
+          }}
+        />
+        <style jsx>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+        <p style={{ color: '#888', fontSize: 14 }}>Loading your project...</p>
+      </div>
+    )
+  }
+
+  if (error || !portalData) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>😕</div>
+        <h2 style={{ color: '#FAFAFA', fontSize: 20, marginBottom: 8 }}>
+          {error || 'Project not found'}
+        </h2>
+        <p style={{ color: '#888', fontSize: 14, marginBottom: 24 }}>
+          We couldn't find a project associated with this portal.
+        </p>
+        <Link
+          href="/"
+          style={{
+            color: config.primaryColor,
+            textDecoration: 'none',
+            fontSize: 14,
+          }}
+        >
+          Return to homepage
+        </Link>
+      </div>
+    )
+  }
+
+  const {
+    project,
+    completion,
+    shiftHours,
+    traditionalEstimate,
+    phases,
+    pendingApprovals,
+    pendingFeedback,
+    newDeliverables,
+    primaryColor,
+    discoveryRequired,
+  } = portalData
+
+  const totalActions = pendingApprovals + pendingFeedback + (discoveryRequired ? 1 : 0)
+  const clientName = project.client_name || 'there'
 
   return (
     <div>
@@ -115,7 +149,7 @@ export default function ClientPortalDashboard() {
             fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
           }}
         >
-          Welcome back, {data.clientName}
+          Welcome back, {clientName}
         </h1>
         <p style={{ margin: '8px 0 0', color: '#888', fontSize: 15 }}>
           Here's where your project stands today.
@@ -139,7 +173,7 @@ export default function ClientPortalDashboard() {
         {/* Progress Ring */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <ProgressRing
-            percentage={data.completion}
+            percentage={completion}
             size="xl"
             label="Complete"
             color="gradient"
@@ -149,7 +183,7 @@ export default function ClientPortalDashboard() {
         {/* Timeline */}
         <div style={{ padding: '0 24px' }}>
           <TimelineBar
-            phases={data.phases}
+            phases={phases}
             size="lg"
           />
         </div>
@@ -159,8 +193,8 @@ export default function ClientPortalDashboard() {
           <div
             style={{
               padding: '20px 28px',
-              background: `${data.primaryColor}15`,
-              border: `1px solid ${data.primaryColor}33`,
+              background: `${primaryColor}15`,
+              border: `1px solid ${primaryColor}33`,
               borderRadius: 12,
               textAlign: 'center',
             }}
@@ -169,7 +203,7 @@ export default function ClientPortalDashboard() {
               style={{
                 fontSize: 42,
                 fontWeight: 700,
-                color: data.primaryColor,
+                color: primaryColor,
                 lineHeight: 1,
               }}
             >
@@ -198,7 +232,7 @@ export default function ClientPortalDashboard() {
       </div>
 
       {/* Discovery Required Banner */}
-      {data.discoveryRequired && (
+      {discoveryRequired && (
         <div style={{ marginBottom: 24 }}>
           <InsightCard
             type="action"
@@ -212,7 +246,7 @@ export default function ClientPortalDashboard() {
       )}
 
       {/* Insight Banner */}
-      {totalActions > 0 && !data.discoveryRequired && (
+      {totalActions > 0 && !discoveryRequired && (
         <div style={{ marginBottom: 24 }}>
           <InsightCard
             type="action"
@@ -256,11 +290,11 @@ export default function ClientPortalDashboard() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: data.discoveryRequired ? '1fr' : 'repeat(3, 1fr)',
+                gridTemplateColumns: discoveryRequired ? '1fr' : 'repeat(3, 1fr)',
                 gap: 12,
               }}
             >
-              {data.discoveryRequired ? (
+              {discoveryRequired ? (
                 <ActionCard
                   icon="📋"
                   title="Complete"
@@ -276,25 +310,25 @@ export default function ClientPortalDashboard() {
                     icon="✅"
                     title="Approve"
                     subtitle="Requirements"
-                    badge={data.pendingApprovals}
+                    badge={pendingApprovals}
                     badgeColor="lime"
-                    variant={data.pendingApprovals > 0 ? 'success' : 'default'}
+                    variant={pendingApprovals > 0 ? 'success' : 'default'}
                     href={`/portal/${clientSlug}/requirements`}
                   />
                   <ActionCard
                     icon="💬"
                     title="Review"
                     subtitle="Deliverables"
-                    badge={data.pendingFeedback}
+                    badge={pendingFeedback}
                     badgeColor="magenta"
-                    variant={data.pendingFeedback > 0 ? 'urgent' : 'default'}
+                    variant={pendingFeedback > 0 ? 'urgent' : 'default'}
                     href={`/portal/${clientSlug}/deliverables`}
                   />
                   <ActionCard
                     icon="📁"
                     title="New"
                     subtitle="Files"
-                    badge={data.newDeliverables}
+                    badge={newDeliverables}
                     badgeColor="cyan"
                     href={`/portal/${clientSlug}/deliverables`}
                   />
@@ -304,7 +338,7 @@ export default function ClientPortalDashboard() {
           </div>
 
           {/* Shift Hours Impact - only show if project has started */}
-          {data.shiftHours > 0 && data.traditionalEstimate > 0 ? (
+          {shiftHours > 0 && traditionalEstimate > 0 ? (
             <div
               style={{
                 padding: 24,
@@ -324,8 +358,8 @@ export default function ClientPortalDashboard() {
                 The SymbAIotic Method™ Impact
               </h2>
               <ComparisonChart
-                shiftHours={data.shiftHours}
-                traditionalHours={data.traditionalEstimate}
+                shiftHours={shiftHours}
+                traditionalHours={traditionalEstimate}
                 size="md"
               />
             </div>
@@ -333,8 +367,8 @@ export default function ClientPortalDashboard() {
             <div
               style={{
                 padding: 24,
-                background: `linear-gradient(135deg, ${data.primaryColor}15, ${data.primaryColor}08)`,
-                border: `1px solid ${data.primaryColor}33`,
+                background: `linear-gradient(135deg, ${primaryColor}15, ${primaryColor}08)`,
+                border: `1px solid ${primaryColor}33`,
                 borderRadius: 16,
               }}
             >
@@ -349,18 +383,18 @@ export default function ClientPortalDashboard() {
                 Getting Started
               </h2>
               <p style={{ margin: 0, fontSize: 14, color: '#AAA', lineHeight: 1.6 }}>
-                {data.discoveryRequired
+                {discoveryRequired
                   ? 'Complete the discovery questionnaire to help us understand your vision and finalize your project plan.'
                   : 'Your project is being set up. We\'ll update this section once work begins.'}
               </p>
-              {data.discoveryRequired && (
+              {discoveryRequired && (
                 <Link
                   href={`/discovery/${clientSlug}`}
                   style={{
                     display: 'inline-block',
                     marginTop: 16,
                     padding: '12px 24px',
-                    background: data.primaryColor,
+                    background: primaryColor,
                     color: '#FAFAFA',
                     textDecoration: 'none',
                     borderRadius: 8,
@@ -397,7 +431,14 @@ export default function ClientPortalDashboard() {
             >
               Recent Activity
             </h2>
-            <ActivityFeed items={mockActivity} maxItems={5} />
+            {activityItems.length > 0 ? (
+              <ActivityFeed items={activityItems} maxItems={5} />
+            ) : (
+              <div style={{ textAlign: 'center', padding: 20, color: '#666' }}>
+                <span style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>📭</span>
+                <p style={{ fontSize: 13, margin: 0 }}>No activity yet</p>
+              </div>
+            )}
           </div>
 
           {/* Need Help */}

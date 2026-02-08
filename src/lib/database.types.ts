@@ -13,11 +13,14 @@ export type Json =
 export type ProjectStatus = 'active' | 'completed' | 'on_hold' | 'cancelled'
 export type TaskStatus = 'backlog' | 'active' | 'review' | 'shipped' | 'icebox'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+export type TaskWorkType = 'human_only' | 'ai_suitable' | 'hybrid'
 export type RequirementStatus = 'draft' | 'review' | 'approved' | 'implemented'
 export type DeliverableStatus = 'pending' | 'uploaded' | 'in_review' | 'approved' | 'rejected'
 export type LeadStatus = 'incoming' | 'qualified' | 'contacted' | 'converted' | 'disqualified'
 export type LeadTier = 'SOFTBALL' | 'MEDIUM' | 'HARD' | 'DISQUALIFY'
 export type LeadSource = 'website' | 'referral' | 'linkedin' | 'other'
+export type AgentStatus = 'active' | 'idle' | 'offline'
+export type TimeEntryType = 'work' | 'review' | 'blocked'
 
 export interface Database {
   public: {
@@ -81,9 +84,16 @@ export interface Database {
           description: string | null
           status: TaskStatus
           priority: TaskPriority
+          work_type: TaskWorkType | null
           shift_hours: number
           traditional_hours_estimate: number
           assigned_to: string | null
+          agent_id: string | null
+          agent_claimed_at: string | null
+          agent_notes: string | null
+          files_modified: string[] | null
+          requirements: Json | null
+          acceptance_criteria: string[] | null
           created_at: string
           updated_at: string
           shipped_at: string | null
@@ -97,9 +107,16 @@ export interface Database {
           description?: string | null
           status?: TaskStatus
           priority?: TaskPriority
+          work_type?: TaskWorkType | null
           shift_hours?: number
           traditional_hours_estimate?: number
           assigned_to?: string | null
+          agent_id?: string | null
+          agent_claimed_at?: string | null
+          agent_notes?: string | null
+          files_modified?: string[] | null
+          requirements?: Json | null
+          acceptance_criteria?: string[] | null
           created_at?: string
           updated_at?: string
           shipped_at?: string | null
@@ -113,9 +130,16 @@ export interface Database {
           description?: string | null
           status?: TaskStatus
           priority?: TaskPriority
+          work_type?: TaskWorkType | null
           shift_hours?: number
           traditional_hours_estimate?: number
           assigned_to?: string | null
+          agent_id?: string | null
+          agent_claimed_at?: string | null
+          agent_notes?: string | null
+          files_modified?: string[] | null
+          requirements?: Json | null
+          acceptance_criteria?: string[] | null
           created_at?: string
           updated_at?: string
           shipped_at?: string | null
@@ -515,6 +539,163 @@ export interface Database {
         }
       }
 
+      // Intake Tokens - Track intake form access tokens
+      intake_tokens: {
+        Row: {
+          id: string
+          lead_id: number | null
+          token: string
+          used: boolean
+          used_at: string | null
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          lead_id?: number | null
+          token: string
+          used?: boolean
+          used_at?: string | null
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          lead_id?: number | null
+          token?: string
+          used?: boolean
+          used_at?: string | null
+          expires_at?: string
+          created_at?: string
+        }
+      }
+
+      // Intake Submissions - Full questionnaire responses
+      intake_submissions: {
+        Row: {
+          id: string
+          lead_id: number | null
+          token: string | null
+          answers: Json
+          submitted_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          lead_id?: number | null
+          token?: string | null
+          answers: Json
+          submitted_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          lead_id?: number | null
+          token?: string | null
+          answers?: Json
+          submitted_at?: string
+          created_at?: string
+        }
+      }
+
+      // Agents - Claude Code instances
+      agents: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          status: AgentStatus
+          capabilities: string[] | null
+          current_task_id: string | null
+          session_id: string | null
+          last_heartbeat: string | null
+          total_tasks_completed: number
+          total_hours_logged: number
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          status?: AgentStatus
+          capabilities?: string[] | null
+          current_task_id?: string | null
+          session_id?: string | null
+          last_heartbeat?: string | null
+          total_tasks_completed?: number
+          total_hours_logged?: number
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          status?: AgentStatus
+          capabilities?: string[] | null
+          current_task_id?: string | null
+          session_id?: string | null
+          last_heartbeat?: string | null
+          total_tasks_completed?: number
+          total_hours_logged?: number
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+
+      // Time Entries - Detailed time logging for tasks
+      time_entries: {
+        Row: {
+          id: string
+          task_id: string
+          agent_id: string | null
+          user_id: string | null
+          entry_type: TimeEntryType
+          started_at: string
+          ended_at: string | null
+          duration_minutes: number | null
+          notes: string | null
+          files_modified: string[] | null
+          commit_hash: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          task_id: string
+          agent_id?: string | null
+          user_id?: string | null
+          entry_type?: TimeEntryType
+          started_at?: string
+          ended_at?: string | null
+          duration_minutes?: number | null
+          notes?: string | null
+          files_modified?: string[] | null
+          commit_hash?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          task_id?: string
+          agent_id?: string | null
+          user_id?: string | null
+          entry_type?: TimeEntryType
+          started_at?: string
+          ended_at?: string | null
+          duration_minutes?: number | null
+          notes?: string | null
+          files_modified?: string[] | null
+          commit_hash?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+      }
+
       // Activity Log - Track all changes
       activity_log: {
         Row: {
@@ -600,6 +781,22 @@ export type ActivityLogEntry = Database['public']['Tables']['activity_log']['Row
 export type Lead = Database['public']['Tables']['leads']['Row']
 export type LeadInsert = Database['public']['Tables']['leads']['Insert']
 export type LeadUpdate = Database['public']['Tables']['leads']['Update']
+
+export type IntakeToken = Database['public']['Tables']['intake_tokens']['Row']
+export type IntakeTokenInsert = Database['public']['Tables']['intake_tokens']['Insert']
+export type IntakeTokenUpdate = Database['public']['Tables']['intake_tokens']['Update']
+
+export type IntakeSubmission = Database['public']['Tables']['intake_submissions']['Row']
+export type IntakeSubmissionInsert = Database['public']['Tables']['intake_submissions']['Insert']
+export type IntakeSubmissionUpdate = Database['public']['Tables']['intake_submissions']['Update']
+
+export type Agent = Database['public']['Tables']['agents']['Row']
+export type AgentInsert = Database['public']['Tables']['agents']['Insert']
+export type AgentUpdate = Database['public']['Tables']['agents']['Update']
+
+export type TimeEntry = Database['public']['Tables']['time_entries']['Row']
+export type TimeEntryInsert = Database['public']['Tables']['time_entries']['Insert']
+export type TimeEntryUpdate = Database['public']['Tables']['time_entries']['Update']
 
 // ShiftCards types
 export type ShiftCardTier = 'basic' | 'pro' | 'custom'

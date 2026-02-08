@@ -3,16 +3,16 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CursorWrapper } from '@/components/shared/CursorWrapper'
-import { useReCaptcha } from '@/components/shared/ReCaptcha'
+import { TurnstileWidget } from '@/components/shared/Turnstile'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { execute: executeCaptcha, isConfigured: captchaEnabled } = useReCaptcha()
 
   // Validate redirect to prevent open redirect attacks
   const rawRedirect = searchParams.get('redirect') || '/internal'
@@ -36,20 +36,14 @@ function LoginForm() {
     setError('')
 
     try {
-      // Get CAPTCHA token if configured
-      let captchaToken: string | null = null
-      if (captchaEnabled) {
-        captchaToken = await executeCaptcha('login')
-      }
-
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
           password,
-          captchaToken,
-          captchaType: 'recaptcha',
+          captchaToken: turnstileToken,
+          captchaType: 'turnstile',
         }),
       })
 
@@ -197,6 +191,15 @@ function LoginForm() {
               {error}
             </div>
           )}
+
+          {/* Turnstile Widget */}
+          <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+            <TurnstileWidget
+              onVerify={(token) => setTurnstileToken(token)}
+              onExpired={() => setTurnstileToken(null)}
+              onError={() => setTurnstileToken(null)}
+            />
+          </div>
 
           <button
             type="submit"

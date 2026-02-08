@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ContactSubmission } from '@/lib/supabase'
 import { sendNewLeadNotification, sendContactConfirmation } from '@/lib/email'
+import { classifyLead, getFallbackClassification, classificationToJson } from '@/lib/classifier'
+import type { Lead, LeadStatus } from '@/lib/database.types'
 
 // Create server-side Supabase client
 function getServerSupabase() {
@@ -13,6 +15,14 @@ function getServerSupabase() {
 
 // Make.com webhook for lead pipeline automation (secondary)
 const MAKE_WEBHOOK_URL = 'https://hook.us2.make.com/ud1mk1qkvy4hpu7rw7wtn45ukxhlixru'
+
+// Map tier to status
+const TIER_STATUS_MAP: Record<string, LeadStatus> = {
+  SOFTBALL: 'qualified',
+  MEDIUM: 'qualified',
+  HARD: 'incoming',
+  DISQUALIFY: 'disqualified',
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,15 +49,21 @@ export async function POST(request: NextRequest) {
     // Track what succeeded for error reporting
     const results = {
       supabase: false,
+      lead: false,
+      leadClassified: false,
       emailNotification: false,
       emailConfirmation: false,
       makeWebhook: false
     }
 
+    let leadId: string | null = null
+    let classificationTier: string | null = null
+
     // 1. PRIMARY: Save to Supabase (this is our source of truth)
     const supabase = getServerSupabase()
     if (supabase) {
       try {
+        // Save to contact_submissions (legacy table)
         const { error } = await supabase
           .from('contact_submissions')
           .insert([{
@@ -61,6 +77,62 @@ export async function POST(request: NextRequest) {
           results.supabase = true
         } else {
           console.error('Supabase insert error:', error)
+        }
+
+        // Also create a lead entry for the classification pipeline
+        const { data: newLead, error: leadError } = await supabase
+          .from('leads')
+          .insert({
+            name,
+            email: email.toLowerCase(),
+            message,
+            source: 'website',
+            status: 'incoming',
+            tier: null,
+            answers: null,
+            ai_assessment: null,
+          })
+          .select()
+          .single()
+
+        if (!leadError && newLead) {
+          results.lead = true
+          leadId = newLead.id
+
+          // Attempt to classify the lead directly (non-blocking)
+          // This provides instant classification without waiting for Make.com
+          try {
+            const classification = await classifyLead(newLead as Lead)
+            const newStatus = TIER_STATUS_MAP[classification.tier] || 'incoming'
+
+            await supabase
+              .from('leads')
+              .update({
+                tier: classification.tier,
+                status: newStatus,
+                ai_assessment: classificationToJson(classification),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', newLead.id)
+
+            results.leadClassified = true
+            classificationTier = classification.tier
+
+            console.log('Lead classified:', {
+              id: newLead.id,
+              tier: classification.tier,
+              confidence: classification.confidence,
+            })
+          } catch (classifyError) {
+            console.error('Lead classification failed (will retry via Make.com):', classifyError)
+            // Classification failed - Make.com will retry
+          }
+        } else if (leadError?.code === '23505') {
+          // Lead already exists with this email - that's okay
+          console.log('Lead already exists for email:', email.replace(/(.{3}).*@/, '$1***@'))
+          results.lead = true
+        } else if (leadError) {
+          console.error('Lead creation error:', leadError)
         }
       } catch (dbError) {
         console.error('Supabase connection error:', dbError)
@@ -122,6 +194,8 @@ export async function POST(request: NextRequest) {
     console.log('Contact form submission results:', {
       name,
       email: email.replace(/(.{3}).*@/, '$1***@'), // Partially redact email
+      leadId,
+      classificationTier,
       results
     })
 

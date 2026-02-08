@@ -1,25 +1,25 @@
 /**
- * /api/leads/[id] - Single Lead CRUD API
+ * /api/clients/[id] - Single Client CRUD API
  *
- * GET    - Get a single lead by ID
- * PATCH  - Update lead fields (status, tier, ai_assessment, etc.)
- * DELETE - Delete a lead
+ * GET    - Get a single client by ID
+ * PATCH  - Update client fields
+ * DELETE - Delete a client
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import type { LeadUpdate, LeadStatus, LeadTier, Json } from '@/lib/database.types'
+import type { ClientUpdate } from '@/lib/database.types'
 
-// Valid enum values for validation
-const VALID_STATUSES: LeadStatus[] = ['incoming', 'qualified', 'contacted', 'converted', 'disqualified']
-const VALID_TIERS: LeadTier[] = ['SOFTBALL', 'MEDIUM', 'HARD', 'DISQUALIFY']
+// Valid status values for validation
+type ClientStatus = 'active' | 'completed' | 'prospect' | 'churned'
+const VALID_STATUSES: ClientStatus[] = ['active', 'completed', 'prospect', 'churned']
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 /**
- * GET /api/leads/[id]
- * Get a single lead by ID
+ * GET /api/clients/[id]
+ * Get a single client by ID
  */
 export async function GET(
   request: NextRequest,
@@ -31,7 +31,7 @@ export async function GET(
     // Validate UUID format
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { error: 'Invalid lead ID format' },
+        { error: 'Invalid client ID format' },
         { status: 400 }
       )
     }
@@ -40,7 +40,7 @@ export async function GET(
 
     // Note: Using 'as any' until database types are regenerated from Supabase
     const { data, error } = await (supabase
-      .from('leads') as any)
+      .from('clients') as any)
       .select('*')
       .eq('id', id)
       .single()
@@ -48,14 +48,14 @@ export async function GET(
     if (error) {
       if (error.code === 'PGRST116') {
         return NextResponse.json(
-          { error: 'Lead not found' },
+          { error: 'Client not found' },
           { status: 404 }
         )
       }
 
-      console.error('Supabase error fetching lead:', error)
+      console.error('Supabase error fetching client:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch lead' },
+        { error: 'Failed to fetch client' },
         { status: 500 }
       )
     }
@@ -65,7 +65,7 @@ export async function GET(
       data
     })
   } catch (error) {
-    console.error('Error fetching lead:', error)
+    console.error('Error fetching client:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -74,10 +74,10 @@ export async function GET(
 }
 
 /**
- * PATCH /api/leads/[id]
- * Update a lead's fields
+ * PATCH /api/clients/[id]
+ * Update a client's fields
  *
- * Updatable fields: status, tier, ai_assessment, name, email, company, phone, message, answers
+ * Updatable fields: name, company, email, phone, status, total_value, avatar_url
  */
 export async function PATCH(
   request: NextRequest,
@@ -89,7 +89,7 @@ export async function PATCH(
     // Validate UUID format
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { error: 'Invalid lead ID format' },
+        { error: 'Invalid client ID format' },
         { status: 400 }
       )
     }
@@ -98,8 +98,51 @@ export async function PATCH(
     const body = await request.json()
 
     // Build update object with validation
-    const updateData: LeadUpdate = {}
+    const updateData: ClientUpdate = {}
     let hasUpdates = false
+
+    // Validate and add name if provided
+    if (body.name !== undefined) {
+      if (typeof body.name !== 'string' || body.name.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Name must be a non-empty string' },
+          { status: 400 }
+        )
+      }
+      updateData.name = body.name.trim()
+      hasUpdates = true
+    }
+
+    // Validate and add company if provided
+    if (body.company !== undefined) {
+      if (typeof body.company !== 'string' || body.company.trim().length === 0) {
+        return NextResponse.json(
+          { error: 'Company must be a non-empty string' },
+          { status: 400 }
+        )
+      }
+      updateData.company = body.company.trim()
+      hasUpdates = true
+    }
+
+    // Validate and add email if provided
+    if (body.email !== undefined) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (typeof body.email !== 'string' || !emailRegex.test(body.email)) {
+        return NextResponse.json(
+          { error: 'Invalid email format' },
+          { status: 400 }
+        )
+      }
+      updateData.email = body.email.toLowerCase().trim()
+      hasUpdates = true
+    }
+
+    // Add phone if provided
+    if (body.phone !== undefined) {
+      updateData.phone = body.phone?.trim() || null
+      hasUpdates = true
+    }
 
     // Validate and add status if provided
     if (body.status !== undefined) {
@@ -113,80 +156,33 @@ export async function PATCH(
       hasUpdates = true
     }
 
-    // Validate and add tier if provided
-    if (body.tier !== undefined) {
-      if (body.tier !== null && !VALID_TIERS.includes(body.tier)) {
+    // Validate and add total_value if provided
+    if (body.total_value !== undefined) {
+      if (typeof body.total_value !== 'number' || body.total_value < 0) {
         return NextResponse.json(
-          { error: `Invalid tier. Must be one of: ${VALID_TIERS.join(', ')} or null` },
+          { error: 'Total value must be a positive number' },
           { status: 400 }
         )
       }
-      updateData.tier = body.tier
+      updateData.total_value = body.total_value
       hasUpdates = true
     }
 
-    // Add ai_assessment if provided (JSON object)
-    if (body.ai_assessment !== undefined) {
-      if (body.ai_assessment !== null && typeof body.ai_assessment !== 'object') {
+    // Add avatar_url if provided
+    if (body.avatar_url !== undefined) {
+      updateData.avatar_url = body.avatar_url || null
+      hasUpdates = true
+    }
+
+    // Add last_active if provided
+    if (body.last_active !== undefined) {
+      if (body.last_active !== null && isNaN(Date.parse(body.last_active))) {
         return NextResponse.json(
-          { error: 'ai_assessment must be an object or null' },
+          { error: 'Invalid last_active format' },
           { status: 400 }
         )
       }
-      updateData.ai_assessment = body.ai_assessment as Json
-      hasUpdates = true
-    }
-
-    // Add name if provided
-    if (body.name !== undefined) {
-      if (typeof body.name !== 'string' || body.name.trim().length === 0) {
-        return NextResponse.json(
-          { error: 'Name must be a non-empty string' },
-          { status: 400 }
-        )
-      }
-      updateData.name = body.name.trim()
-      hasUpdates = true
-    }
-
-    // Add email if provided
-    if (body.email !== undefined) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (typeof body.email !== 'string' || !emailRegex.test(body.email)) {
-        return NextResponse.json(
-          { error: 'Invalid email format' },
-          { status: 400 }
-        )
-      }
-      updateData.email = body.email.toLowerCase().trim()
-      hasUpdates = true
-    }
-
-    // Add optional string fields
-    if (body.company !== undefined) {
-      updateData.company = body.company?.trim() || null
-      hasUpdates = true
-    }
-
-    if (body.phone !== undefined) {
-      updateData.phone = body.phone?.trim() || null
-      hasUpdates = true
-    }
-
-    if (body.message !== undefined) {
-      updateData.message = body.message?.trim() || null
-      hasUpdates = true
-    }
-
-    // Add answers if provided (JSON object)
-    if (body.answers !== undefined) {
-      if (body.answers !== null && typeof body.answers !== 'object') {
-        return NextResponse.json(
-          { error: 'answers must be an object or null' },
-          { status: 400 }
-        )
-      }
-      updateData.answers = body.answers as Json
+      updateData.last_active = body.last_active
       hasUpdates = true
     }
 
@@ -204,7 +200,7 @@ export async function PATCH(
     // Perform the update
     // Note: Using 'as any' until database types are regenerated from Supabase
     const { data, error } = await (supabase
-      .from('leads') as any)
+      .from('clients') as any)
       .update(updateData)
       .eq('id', id)
       .select()
@@ -213,7 +209,7 @@ export async function PATCH(
     if (error) {
       if (error.code === 'PGRST116') {
         return NextResponse.json(
-          { error: 'Lead not found' },
+          { error: 'Client not found' },
           { status: 404 }
         )
       }
@@ -221,25 +217,25 @@ export async function PATCH(
       // Handle unique constraint violation (duplicate email)
       if (error.code === '23505') {
         return NextResponse.json(
-          { error: 'A lead with this email already exists' },
+          { error: 'A client with this email already exists' },
           { status: 409 }
         )
       }
 
-      console.error('Supabase error updating lead:', error)
+      console.error('Supabase error updating client:', error)
       return NextResponse.json(
-        { error: 'Failed to update lead' },
+        { error: 'Failed to update client' },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Lead updated successfully',
+      message: 'Client updated successfully',
       data
     })
   } catch (error) {
-    console.error('Error updating lead:', error)
+    console.error('Error updating client:', error)
 
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
@@ -257,8 +253,8 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/leads/[id]
- * Delete a lead
+ * DELETE /api/clients/[id]
+ * Delete a client
  */
 export async function DELETE(
   request: NextRequest,
@@ -270,16 +266,17 @@ export async function DELETE(
     // Validate UUID format
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { error: 'Invalid lead ID format' },
+        { error: 'Invalid client ID format' },
         { status: 400 }
       )
     }
 
     const supabase = createServerClient()
 
-    // Check if lead exists first
-    const { data: existingLead, error: fetchError } = await (supabase
-      .from('leads') as any)
+    // Check if client exists first
+    // Note: Using 'as any' until database types are regenerated from Supabase
+    const { data: existingClient, error: fetchError } = await (supabase
+      .from('clients') as any)
       .select('id')
       .eq('id', id)
       .single()
@@ -287,37 +284,38 @@ export async function DELETE(
     if (fetchError) {
       if (fetchError.code === 'PGRST116') {
         return NextResponse.json(
-          { error: 'Lead not found' },
+          { error: 'Client not found' },
           { status: 404 }
         )
       }
-      console.error('Supabase error checking lead:', fetchError)
+      console.error('Supabase error checking client:', fetchError)
       return NextResponse.json(
-        { error: 'Failed to delete lead' },
+        { error: 'Failed to delete client' },
         { status: 500 }
       )
     }
 
-    // Delete the lead
+    // Delete the client
+    // Note: Using 'as any' until database types are regenerated from Supabase
     const { error: deleteError } = await (supabase
-      .from('leads') as any)
+      .from('clients') as any)
       .delete()
       .eq('id', id)
 
     if (deleteError) {
-      console.error('Supabase error deleting lead:', deleteError)
+      console.error('Supabase error deleting client:', deleteError)
       return NextResponse.json(
-        { error: 'Failed to delete lead' },
+        { error: 'Failed to delete client' },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Lead deleted successfully'
+      message: 'Client deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting lead:', error)
+    console.error('Error deleting client:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

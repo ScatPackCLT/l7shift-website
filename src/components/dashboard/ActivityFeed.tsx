@@ -2,7 +2,7 @@
 
 interface ActivityItem {
   id: string
-  type: 'task_created' | 'task_shipped' | 'task_updated' | 'deliverable_uploaded' | 'feedback_added' | 'requirement_approved' | 'comment_added'
+  type: 'task_created' | 'task_shipped' | 'task_updated' | 'deliverable_uploaded' | 'deliverable_approved' | 'feedback_added' | 'feedback_received' | 'requirement_created' | 'requirement_approved' | 'milestone_reached' | 'project_update' | 'comment_added'
   title: string
   description?: string
   actor: string
@@ -23,8 +23,13 @@ const activityConfig: Record<ActivityItem['type'], { icon: string; color: string
   task_shipped: { icon: '\uD83D\uDE80', color: '#BFFF00', verb: 'shipped' },
   task_updated: { icon: '\u270F\uFE0F', color: '#888', verb: 'updated' },
   deliverable_uploaded: { icon: '\uD83D\uDCC1', color: '#FF00AA', verb: 'uploaded' },
+  deliverable_approved: { icon: '\u2705', color: '#BFFF00', verb: 'approved' },
   feedback_added: { icon: '\uD83D\uDCAC', color: '#FFAA00', verb: 'commented on' },
+  feedback_received: { icon: '\uD83D\uDCAC', color: '#FFAA00', verb: 'received feedback on' },
+  requirement_created: { icon: '\uD83D\uDCDD', color: '#00F0FF', verb: 'created' },
   requirement_approved: { icon: '\u2705', color: '#BFFF00', verb: 'approved' },
+  milestone_reached: { icon: '\uD83C\uDFC6', color: '#BFFF00', verb: 'reached' },
+  project_update: { icon: '\uD83D\uDCE2', color: '#00F0FF', verb: 'updated' },
   comment_added: { icon: '\uD83D\uDCAC', color: '#00F0FF', verb: 'commented on' },
 }
 

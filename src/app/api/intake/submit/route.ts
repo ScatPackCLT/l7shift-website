@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase'
 
 type IntakeSubmission = {
   token: string
@@ -66,49 +67,123 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Save to Supabase/ShiftBoard
-    // const { data, error } = await supabase
-    //   .from('intake_submissions')
-    //   .insert({
-    //     token: body.token,
-    //     answers: {
-    //       role: body.role,
-    //       company_size: body.companySize,
-    //       industry: body.industry,
-    //       industry_other: body.industryOther,
-    //       project_type: body.needs,
-    //       project_type_other: body.needsOther,
-    //       vision_clarity: body.visionClarity,
-    //       timeline: body.timeline,
-    //       budget: body.budget,
-    //       decision_maker: body.decisionMaker,
-    //       current_tools: body.currentTools,
-    //       frustration: body.frustration,
-    //       frustration_other: body.frustrationOther,
-    //       past_experience: body.pastExperience,
-    //       success_criteria: body.successCriteria,
-    //       source: body.source,
-    //       source_other: body.sourceOther,
-    //     },
-    //     submitted_at: new Date().toISOString(),
-    //   })
+    // Build answers object for storage
+    const answers = {
+      role: body.role,
+      company_size: body.companySize,
+      industry: body.industry,
+      industry_other: body.industryOther || null,
+      project_type: body.needs,
+      project_type_other: body.needsOther || null,
+      vision_clarity: body.visionClarity,
+      timeline: body.timeline,
+      budget: body.budget,
+      decision_maker: body.decisionMaker,
+      current_tools: body.currentTools,
+      frustration: body.frustration,
+      frustration_other: body.frustrationOther || null,
+      past_experience: body.pastExperience,
+      success_criteria: body.successCriteria,
+      source: body.source,
+      source_other: body.sourceOther || null,
+    }
 
-    // TODO: Mark token as used
-    // await supabase
-    //   .from('intake_tokens')
-    //   .update({ used: true, used_at: new Date().toISOString() })
-    //   .eq('token', body.token)
+    // Try to save to Supabase
+    let leadId: number | null = null
+    let savedToDb = false
 
-    // TODO: Trigger Make.com webhook for lead scoring
-    // await fetch(process.env.MAKE_INTAKE_WEBHOOK_URL, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(body),
-    // })
+    try {
+      const supabase = createServerClient()
+
+      // Look up the token to get the lead_id
+      // Type the response since tables may not exist yet
+      type TokenRow = { lead_id: number | null }
+
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('intake_tokens')
+        .select('lead_id')
+        .eq('token', body.token)
+        .eq('used', false)
+        .gt('expires_at', new Date().toISOString())
+        .single() as { data: TokenRow | null; error: unknown }
+
+      if (!tokenError && tokenData) {
+        leadId = tokenData.lead_id
+      }
+
+      // Save the intake submission
+      const { error: insertError } = await supabase
+        .from('intake_submissions')
+        .insert({
+          lead_id: leadId,
+          token: body.token,
+          answers: answers,
+          submitted_at: new Date().toISOString(),
+        } as never)
+
+      if (insertError) {
+        console.error('Failed to save intake submission:', insertError)
+      } else {
+        savedToDb = true
+      }
+
+      // Mark token as used
+      if (body.token) {
+        const { error: updateTokenError } = await supabase
+          .from('intake_tokens')
+          .update({
+            used: true,
+            used_at: new Date().toISOString()
+          } as never)
+          .eq('token', body.token)
+
+        if (updateTokenError) {
+          console.error('Failed to mark token as used:', updateTokenError)
+        }
+      }
+
+      // Update the lead with intake data
+      if (leadId) {
+        const { error: updateLeadError } = await supabase
+          .from('leads')
+          .update({
+            answers: answers,
+          } as never)
+          .eq('id', leadId)
+
+        if (updateLeadError) {
+          console.error('Failed to update lead with intake data:', updateLeadError)
+        }
+      }
+
+    } catch (dbError) {
+      console.error('Database error:', dbError)
+      // Continue even if DB fails - we'll send email notification as fallback
+    }
+
+    // Trigger Make.com webhook for lead classification (if configured)
+    const makeWebhookUrl = process.env.MAKE_INTAKE_WEBHOOK_URL
+    if (makeWebhookUrl) {
+      try {
+        await fetch(makeWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...body,
+            answers,
+            lead_id: leadId,
+            submitted_at: new Date().toISOString(),
+          }),
+        })
+      } catch (webhookError) {
+        console.error('Failed to trigger Make.com webhook:', webhookError)
+      }
+    }
 
     console.log('Intake submission received:', JSON.stringify(body, null, 2))
+    console.log('Saved to database:', savedToDb)
 
-    // Send notification email
+    // Send notification email as fallback/backup
     try {
       await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://l7shift.com'}/api/contact`, {
         method: 'POST',
@@ -126,6 +201,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Intake submitted successfully',
+      savedToDb,
     })
   } catch (error) {
     console.error('Intake submission error:', error)

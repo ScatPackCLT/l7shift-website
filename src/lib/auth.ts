@@ -102,13 +102,13 @@ function getEnvUser(email: string): User | null {
       client_slug: 'prettypaidcloset',
       name: 'Jasmine Mayham (Jazz)',
     },
-    'marcus@scatpackclt.com': {
-      email: 'marcus@scatpackclt.com',
+    'ken@scatpackclt.com': {
+      email: 'ken@scatpackclt.com',
       password_hash: '',
       envPassword: process.env.SCATPACK_CLIENT_PASSWORD || '',
       role: 'client',
       client_slug: 'scat-pack-clt',
-      name: 'Marcus',
+      name: 'Ken',
     },
     'nicole@stitchwichs.com': {
       email: 'nicole@stitchwichs.com',
