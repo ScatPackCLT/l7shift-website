@@ -136,6 +136,47 @@ export default function LeadDetailPage() {
     }
   }
 
+  async function convertToClient() {
+    if (!lead) return
+
+    setSaving(true)
+
+    try {
+      // 1. Create client record
+      const clientRes = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: lead.name,
+          email: lead.email,
+          company: 'TBD',
+          status: 'active',
+          total_value: 0,
+        }),
+      })
+      const clientJson = await clientRes.json()
+      if (!clientRes.ok) throw new Error(clientJson.error || 'Failed to create client')
+
+      // 2. Update lead status to converted
+      const leadRes = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'converted' }),
+      })
+      const leadJson = await leadRes.json()
+      if (!leadRes.ok) throw new Error(leadJson.error || 'Failed to update lead')
+
+      setLead({ ...lead, status: 'converted' })
+      alert('Client created! Redirecting to clients page...')
+      router.push('/internal/clients')
+    } catch (error) {
+      console.error('Error converting lead:', error)
+      alert(error instanceof Error ? error.message : 'Failed to convert lead')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
@@ -699,7 +740,7 @@ export default function LeadDetailPage() {
 
               {lead.status !== 'converted' && lead.status !== 'disqualified' && (
                 <button
-                  onClick={() => updateLead({ status: 'converted' })}
+                  onClick={convertToClient}
                   disabled={saving}
                   style={{
                     padding: '12px 16px',
