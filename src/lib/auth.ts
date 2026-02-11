@@ -94,6 +94,13 @@ async function getEnvUser(email: string): Promise<User | null> {
       role: 'admin',
       name: 'Ken',
     },
+    'ethan@l7shift.com': {
+      email: 'ethan@l7shift.com',
+      password_hash: '',
+      envPassword: process.env.ETHAN_ADMIN_PASSWORD || '',
+      role: 'admin',
+      name: 'Ethan',
+    },
     'closetsbyjazz@gmail.com': {
       email: 'closetsbyjazz@gmail.com',
       password_hash: '',
