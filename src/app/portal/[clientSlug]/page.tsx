@@ -34,6 +34,7 @@ export default function ClientPortalDashboard() {
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [expandedTask, setExpandedTask] = useState<string | null>(null)
   const [portalData, setPortalData] = useState<PortalProject | null>(null)
   const [requirements, setRequirements] = useState<RequirementDoc[]>([])
   const [deliverables, setDeliverables] = useState<Deliverable[]>([])
@@ -417,51 +418,77 @@ export default function ClientPortalDashboard() {
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {activeTasks.map((task, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  padding: '12px 14px',
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: 10,
-                  alignItems: 'center',
-                }}
-              >
+            {activeTasks.map((task) => {
+              const isExpanded = expandedTask === task.id
+              return (
                 <div
+                  key={task.id}
+                  onClick={() => setExpandedTask(isExpanded ? null : task.id)}
                   style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: task.status === 'review' ? '#FF00AA' : accentColor,
-                    flexShrink: 0,
+                    padding: '14px 16px',
+                    background: isExpanded ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
+                    border: isExpanded
+                      ? `1px solid ${task.status === 'review' ? 'rgba(255,0,170,0.25)' : primaryColor + '33'}`
+                      : '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
                   }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: '#FAFAFA' }}>{task.title}</div>
-                  {task.description && (
-                    <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
-                      {task.description.length > 120 ? task.description.slice(0, 120) + '...' : task.description}
+                >
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: task.status === 'review' ? '#FF00AA' : accentColor,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: '#FAFAFA' }}>{task.title}</div>
+                      {!isExpanded && task.description && (
+                        <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                          {task.description.length > 80 ? task.description.slice(0, 80) + '...' : task.description}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <span
+                        style={{
+                          padding: '4px 10px',
+                          background: task.status === 'review' ? 'rgba(255,0,170,0.12)' : `${accentColor}18`,
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: task.status === 'review' ? '#FF00AA' : accentColor,
+                        }}
+                      >
+                        {task.status === 'review' ? 'In Review' : 'Building'}
+                      </span>
+                      <span style={{ color: '#555', fontSize: 12, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>
+                        ▾
+                      </span>
+                    </div>
+                  </div>
+                  {isExpanded && task.description && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        paddingTop: 12,
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                        fontSize: 13,
+                        color: '#CCC',
+                        lineHeight: 1.7,
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {task.description}
                     </div>
                   )}
                 </div>
-                <span
-                  style={{
-                    padding: '4px 10px',
-                    background: task.status === 'review' ? 'rgba(255,0,170,0.12)' : `${accentColor}18`,
-                    borderRadius: 6,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: task.status === 'review' ? '#FF00AA' : accentColor,
-                    flexShrink: 0,
-                  }}
-                >
-                  {task.status === 'review' ? 'In Review' : 'Building'}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -481,22 +508,48 @@ export default function ClientPortalDashboard() {
             Shipped ({shippedTasks.length})
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {shippedTasks.map((task, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  gap: 10,
-                  padding: '8px 12px',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ color: '#4ADE80', fontSize: 14 }}>{'\u2713'}</span>
-                <span style={{ fontSize: 13, color: '#666', textDecoration: 'line-through', textDecorationColor: '#333' }}>
-                  {task.title}
-                </span>
-              </div>
-            ))}
+            {shippedTasks.map((task) => {
+              const isExpanded = expandedTask === task.id
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => setExpandedTask(isExpanded ? null : task.id)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    cursor: task.description ? 'pointer' : 'default',
+                    background: isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent',
+                    transition: 'background 0.2s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{ color: '#4ADE80', fontSize: 14, flexShrink: 0 }}>{'\u2713'}</span>
+                    <span style={{ fontSize: 13, color: '#666', flex: 1 }}>
+                      {task.title}
+                    </span>
+                    {task.description && (
+                      <span style={{ color: '#444', fontSize: 11, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>
+                        ▾
+                      </span>
+                    )}
+                  </div>
+                  {isExpanded && task.description && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        marginLeft: 24,
+                        fontSize: 12,
+                        color: '#888',
+                        lineHeight: 1.6,
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {task.description}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
