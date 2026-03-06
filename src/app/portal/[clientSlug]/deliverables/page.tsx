@@ -8,8 +8,8 @@ import {
   getProjectBySlug,
   getProjectDeliverables,
   approveDeliverable,
-  CLIENT_SLUG_MAP,
 } from '@/lib/portal-utils'
+import { getClientConfig } from '@/lib/client-portal-config'
 import type { Deliverable, DeliverableStatus } from '@/lib/database.types'
 
 const typeIcons: Record<string, string> = {
@@ -62,10 +62,7 @@ export default function DeliverablesPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('all')
   const [approvingId, setApprovingId] = useState<string | null>(null)
 
-  const config = CLIENT_SLUG_MAP[clientSlug] || {
-    primaryColor: '#00F0FF',
-    accentColor: '#BFFF00',
-  }
+  const config = getClientConfig(clientSlug)
 
   useEffect(() => {
     loadData()

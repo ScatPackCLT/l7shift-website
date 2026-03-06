@@ -7,8 +7,8 @@ import {
   getProjectBySlug,
   getProjectActivity,
   transformActivityEntry,
-  CLIENT_SLUG_MAP,
 } from '@/lib/portal-utils'
+import { getClientConfig } from '@/lib/client-portal-config'
 
 type ActivityType =
   | 'task_created'
@@ -80,10 +80,7 @@ export default function ActivityPage() {
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [filter, setFilter] = useState<FilterType>('all')
 
-  const config = CLIENT_SLUG_MAP[clientSlug] || {
-    primaryColor: '#00F0FF',
-    accentColor: '#BFFF00',
-  }
+  const config = getClientConfig(clientSlug)
 
   useEffect(() => {
     loadData()
