@@ -25,6 +25,32 @@ const CATEGORIES = [
   { value: 'general', label: 'Other', icon: '📎', desc: 'Anything else' },
 ]
 
+// Per-client asset request lists — keeps client-specific content isolated
+const CLIENT_ASSET_REQUESTS: Record<string, { icon: string; text: string; priority: boolean }[]> = {
+  'stitchwichs': [
+    { icon: '🎨', text: 'Logo files (PNG, SVG, or original design file)', priority: true },
+    { icon: '📸', text: 'Product photos — mockups, finished garments', priority: true },
+    { icon: '📸', text: 'Design reference images — inspiration, color palettes', priority: false },
+    { icon: '🎨', text: 'Any brand files — colors, fonts, mood boards', priority: false },
+    { icon: '📄', text: 'Product catalog or pricing sheet if available', priority: false },
+  ],
+  'shariels-lashes': [
+    { icon: '🎨', text: 'Logo files (PNG, SVG, or original design file)', priority: true },
+    { icon: '📸', text: 'Product photos — each style on white background + on face', priority: true },
+    { icon: '📸', text: 'Lifestyle photos — full look with lashes applied', priority: true },
+    { icon: '📸', text: 'Packaging photos — magnetic box open, standard box, bags', priority: false },
+    { icon: '🎨', text: 'Any brand files — colors, fonts, mood boards', priority: false },
+    { icon: '📄', text: 'Inventory list — styles, quantities, costs per unit', priority: true },
+  ],
+}
+
+const DEFAULT_ASSET_REQUESTS = [
+  { icon: '🎨', text: 'Logo files (PNG, SVG, or original design file)', priority: true },
+  { icon: '📸', text: 'Product or service photos', priority: true },
+  { icon: '🎨', text: 'Any brand files — colors, fonts, mood boards', priority: false },
+  { icon: '📄', text: 'Business documents, specs, or notes', priority: false },
+]
+
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
   const k = 1024
@@ -183,7 +209,7 @@ export default function AssetsPage() {
           Upload Assets
         </h1>
         <p style={{ margin: '8px 0 0', color: '#888', fontSize: 14 }}>
-          Send us your logos, product photos, brand files — everything we need to build your brand.
+          Send us your logos, photos, and brand files — everything we need for your project.
         </p>
       </div>
 
@@ -201,14 +227,7 @@ export default function AssetsPage() {
           What we need from you:
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
-          {[
-            { icon: '🎨', text: 'Logo files (PNG, SVG, or original design file)', priority: true },
-            { icon: '📸', text: 'Product photos — each style on white background + on face', priority: true },
-            { icon: '📸', text: 'Lifestyle photos — full look with lashes applied', priority: true },
-            { icon: '📸', text: 'Packaging photos — magnetic box open, standard box, bags', priority: false },
-            { icon: '🎨', text: 'Any brand files — colors, fonts, mood boards', priority: false },
-            { icon: '📄', text: 'Inventory list — styles, quantities, costs per unit', priority: true },
-          ].map((item, i) => (
+          {(CLIENT_ASSET_REQUESTS[clientSlug] || DEFAULT_ASSET_REQUESTS).map((item, i) => (
             <div
               key={i}
               style={{
