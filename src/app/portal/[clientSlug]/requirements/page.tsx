@@ -8,8 +8,8 @@ import {
   getProjectBySlug,
   getProjectRequirements,
   signOffRequirement,
-  CLIENT_SLUG_MAP,
 } from '@/lib/portal-utils'
+import { getClientConfig } from '@/lib/client-portal-config'
 import type { RequirementDoc, RequirementStatus } from '@/lib/database.types'
 
 interface RequirementSection {
@@ -86,14 +86,12 @@ export default function RequirementsPage() {
   const [selectedDoc, setSelectedDoc] = useState<RequirementDoc | null>(null)
   const [showSignoffModal, setShowSignoffModal] = useState(false)
   const [signatureName, setSignatureName] = useState('')
+  const [clientResponse, setClientResponse] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [signoffError, setSignoffError] = useState<string | null>(null)
   const [signoffSuccess, setSignoffSuccess] = useState(false)
 
-  const config = CLIENT_SLUG_MAP[clientSlug] || {
-    primaryColor: '#00F0FF',
-    accentColor: '#BFFF00',
-  }
+  const config = getClientConfig(clientSlug)
 
   useEffect(() => {
     loadData()
@@ -143,6 +141,7 @@ export default function RequirementsPage() {
           client_id: projectId,
           signed_by: signatureName.trim(),
           signature: signatureName.trim(),
+          response: clientResponse.trim() || undefined,
         }),
       })
 
@@ -185,6 +184,7 @@ export default function RequirementsPage() {
     setShowSignoffModal(false)
     setSelectedDoc(null)
     setSignatureName('')
+    setClientResponse('')
     setSignoffError(null)
     setSignoffSuccess(false)
   }
@@ -625,12 +625,62 @@ export default function RequirementsPage() {
                   Confirm Signoff
                 </h2>
 
-                <p style={{ margin: '0 0 8px', fontSize: 14, color: '#888' }}>
-                  You are approving:
-                </p>
                 <p style={{ margin: '0 0 24px', fontSize: 16, fontWeight: 600, color: '#00F0FF' }}>
                   {selectedDoc.title}
                 </p>
+
+                {/* Full requirement content so client sees the questions */}
+                <div
+                  style={{
+                    padding: 16,
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: 8,
+                    marginBottom: 20,
+                    textAlign: 'left',
+                    maxHeight: 200,
+                    overflowY: 'auto',
+                  }}
+                >
+                  <div style={{ fontSize: 13, color: '#CCC', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                    {selectedDoc.content}
+                  </div>
+                </div>
+
+                {/* Client Response */}
+                <div style={{ marginBottom: 20, textAlign: 'left' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 12,
+                      color: '#888',
+                      marginBottom: 8,
+                      textTransform: 'uppercase',
+                      letterSpacing: 1,
+                    }}
+                  >
+                    Your Response
+                  </label>
+                  <textarea
+                    value={clientResponse}
+                    onChange={(e) => setClientResponse(e.target.value)}
+                    placeholder="Type your answers here..."
+                    rows={5}
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: 8,
+                      color: '#FAFAFA',
+                      fontSize: 14,
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      resize: 'vertical',
+                    }}
+                  />
+                </div>
 
                 {/* Signature Input */}
                 <div style={{ marginBottom: 16, textAlign: 'left' }}>

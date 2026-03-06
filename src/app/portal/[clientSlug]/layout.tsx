@@ -3,6 +3,8 @@
 import { ReactNode, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useParams, useRouter } from 'next/navigation'
+import { CursorWrapper } from '@/components/shared/CursorWrapper'
+import { getClientConfig } from '@/lib/client-portal-config'
 
 interface PortalLayoutProps {
   children: ReactNode
@@ -16,45 +18,12 @@ function getCookie(name: string): string | null {
   return null
 }
 
-// Client configurations - will come from database
-const clientConfigs: Record<string, {
-  name: string
-  logo?: string
-  primaryColor: string
-  accentColor: string
-}> = {
-  'scat-pack-clt': {
-    name: 'Scat Pack CLT',
-    primaryColor: '#00F0FF',
-    accentColor: '#BFFF00',
-  },
-  'prettypaidcloset': {
-    name: 'Pretty Paid Closet',
-    primaryColor: '#B76E79',
-    accentColor: '#FF69B4',
-  },
-  'stitchwichs': {
-    name: 'Stitchwichs',
-    primaryColor: '#8B5CF6',
-    accentColor: '#F59E0B',
-  },
-  'shariels-lashes': {
-    name: "Shariel\u2019s Lashes",
-    primaryColor: '#C6993A',
-    accentColor: '#F8C8D4',
-  },
-}
-
 export default function PortalLayout({ children }: PortalLayoutProps) {
   const pathname = usePathname()
   const params = useParams()
   const router = useRouter()
   const clientSlug = params.clientSlug as string
-  const config = clientConfigs[clientSlug] || {
-    name: 'Client Portal',
-    primaryColor: '#00F0FF',
-    accentColor: '#BFFF00',
-  }
+  const config = getClientConfig(clientSlug)
 
   const [userName, setUserName] = useState('User')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -84,6 +53,7 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
   ]
 
   return (
+    <CursorWrapper>
     <div
       className="client-portal"
       style={{
@@ -333,5 +303,6 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
         }
       `}</style>
     </div>
+    </CursorWrapper>
   )
 }
