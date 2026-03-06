@@ -11,7 +11,7 @@ import {
   type PortalProject,
 } from '@/lib/portal-utils'
 
-type TaskStatus = 'shipped' | 'in_progress' | 'review' | 'backlog' | 'icebox'
+type TaskStatus = 'shipped' | 'active' | 'review' | 'backlog' | 'icebox'
 
 interface TaskGroup {
   label: string
@@ -110,7 +110,7 @@ export default function ClientPortalDashboard() {
   const clientName = project.client_name?.split(' ')[0] || 'there'
 
   // Group tasks by status
-  const activeTasks = tasks.filter(t => t.status === 'in_progress' || t.status === 'review')
+  const activeTasks = tasks.filter(t => t.status === 'active' || t.status === 'review')
   const backlogTasks = tasks.filter(t => t.status === 'backlog')
   const shippedTasks = tasks.filter(t => t.status === 'shipped')
   const iceboxTasks = tasks.filter(t => t.status === 'icebox')
