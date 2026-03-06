@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   getProjectBySlug,
@@ -11,9 +11,16 @@ import {
   type PortalProject,
 } from '@/lib/portal-utils'
 
+type TaskStatus = 'shipped' | 'in_progress' | 'review' | 'backlog' | 'icebox'
+
+interface TaskGroup {
+  label: string
+  color: string
+  tasks: { title: string; description?: string | null; priority: string; status: TaskStatus }[]
+}
+
 export default function ClientPortalDashboard() {
   const params = useParams()
-  const router = useRouter()
   const clientSlug = params.clientSlug as string
 
   const [mounted, setMounted] = useState(false)
@@ -82,7 +89,7 @@ export default function ClientPortalDashboard() {
   if (error || !portalData) {
     return (
       <div style={{ textAlign: 'center', padding: 60 }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>😕</div>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
         <h2 style={{ color: '#FAFAFA', fontSize: 20, marginBottom: 8 }}>
           {error || 'Project not found'}
         </h2>
@@ -99,105 +106,63 @@ export default function ClientPortalDashboard() {
     )
   }
 
-  const { project, completion, primaryColor } = portalData
-  const clientName = project.client_name || 'there'
+  const { project, tasks, completion, shiftHours, traditionalEstimate, primaryColor } = portalData
+  const clientName = project.client_name?.split(' ')[0] || 'there'
 
-  // Phase items for the brand launch roadmap
-  const phases = [
-    {
-      icon: '🎨',
-      title: 'Brand Identity',
-      description: 'Logo refinement, color palette, typography, brand voice',
-      status: 'in-progress' as const,
-    },
-    {
-      icon: '📦',
-      title: 'Packaging & Product',
-      description: 'Premium box design, lash tray inserts, aftercare cards, bags',
-      status: 'upcoming' as const,
-    },
-    {
-      icon: '🌐',
-      title: 'Website & E-Commerce',
-      description: 'Your own website with online ordering and payment',
-      status: 'upcoming' as const,
-    },
-    {
-      icon: '📱',
-      title: 'Marketing & Social',
-      description: 'Instagram content strategy, launch campaign, email marketing',
-      status: 'upcoming' as const,
-    },
-    {
-      icon: '🎪',
-      title: 'Vendor Fair Domination',
-      description: 'Display setup, QR codes, pricing strategy, launch event',
-      status: 'upcoming' as const,
-    },
-  ]
+  // Group tasks by status
+  const activeTasks = tasks.filter(t => t.status === 'in_progress' || t.status === 'review')
+  const backlogTasks = tasks.filter(t => t.status === 'backlog')
+  const shippedTasks = tasks.filter(t => t.status === 'shipped')
+  const iceboxTasks = tasks.filter(t => t.status === 'icebox')
 
-  // What we need from her
-  const needsFromClient = [
-    {
-      icon: '📸',
-      title: 'Product Photos',
-      description: 'Each lash style on white background + being worn. Close-up detail shots.',
-      priority: true,
-      action: 'Upload in "Photos" category',
-    },
-    {
-      icon: '🎨',
-      title: 'Logo & Brand Files',
-      description: 'Your current logo, any design files, fonts you use.',
-      priority: true,
-      action: 'Upload in "Logos" category',
-    },
-    {
-      icon: '📋',
-      title: 'Inventory List',
-      description: 'Every lash style name, quantity in stock, cost per unit, selling price.',
-      priority: true,
-      action: 'Upload as document or photo of your list',
-    },
-    {
-      icon: '📦',
-      title: 'Packaging Photos',
-      description: 'Photos of your current packaging — boxes, trays, bags, aftercare cards.',
-      priority: false,
-      action: 'Upload in "Packaging" category',
-    },
-    {
-      icon: '🖼️',
-      title: 'Inspiration & Mood Board',
-      description: 'Screenshots of brands/packaging/websites you love. What vibe do you want?',
-      priority: false,
-      action: 'Upload in "Other" category',
-    },
-    {
-      icon: '📝',
-      title: 'Your Story',
-      description: 'A few sentences about why you started this, what makes your lashes different.',
-      priority: false,
-      action: 'Can text to Ken or type in Documents',
-    },
-  ]
+  // Build task groups for display
+  const taskGroups: TaskGroup[] = []
+
+  if (activeTasks.length > 0) {
+    taskGroups.push({
+      label: 'In Progress',
+      color: config.accentColor,
+      tasks: activeTasks.map(t => ({
+        title: t.title,
+        description: t.description,
+        priority: t.priority,
+        status: t.status as TaskStatus,
+      })),
+    })
+  }
+
+  if (backlogTasks.length > 0) {
+    taskGroups.push({
+      label: 'Up Next',
+      color: primaryColor,
+      tasks: backlogTasks.map(t => ({
+        title: t.title,
+        description: t.description,
+        priority: t.priority,
+        status: t.status as TaskStatus,
+      })),
+    })
+  }
+
+  // Stats
+  const totalActive = tasks.filter(t => t.status !== 'icebox').length
+  const timeSaved = traditionalEstimate - shiftHours
+
+  const statusColors: Record<string, string> = {
+    high: '#FF6B6B',
+    medium: '#F59E0B',
+    low: '#888',
+  }
 
   return (
     <div>
       {/* Welcome */}
       <div style={{ marginBottom: 24 }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 24,
-            fontWeight: 700,
-            color: '#FAFAFA',
-          }}
-        >
-          Welcome, {clientName} ✨
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#FAFAFA' }}>
+          Welcome, {clientName}
         </h1>
         <p style={{ margin: '6px 0 0', color: '#888', fontSize: 14 }}>
-          Your brand launch headquarters. Here&apos;s everything happening.
+          Your project dashboard. Here&apos;s where everything stands.
         </p>
       </div>
 
@@ -233,7 +198,7 @@ export default function ClientPortalDashboard() {
           </div>
         </div>
         {/* Progress bar */}
-        <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3 }}>
+        <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, marginBottom: 14 }}>
           <div
             style={{
               height: '100%',
@@ -244,169 +209,184 @@ export default function ClientPortalDashboard() {
             }}
           />
         </div>
-      </div>
-
-      {/* What We Need — TOP PRIORITY */}
-      <div
-        style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: 16,
-          padding: 20,
-          marginBottom: 20,
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: '#FAFAFA' }}>
-            What We Need From You
-          </h2>
-          <Link
-            href={`/portal/${clientSlug}/assets`}
-            style={{
-              padding: '8px 16px',
-              background: primaryColor,
-              color: '#0A0A0A',
-              textDecoration: 'none',
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            Upload Files →
-          </Link>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {needsFromClient.map((item, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                gap: 12,
-                padding: '14px 16px',
-                background: item.priority ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.015)',
-                border: `1px solid ${item.priority ? primaryColor + '25' : 'rgba(255,255,255,0.06)'}`,
-                borderRadius: 12,
-                alignItems: 'flex-start',
-              }}
-            >
-              <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>{item.icon}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#FAFAFA' }}>{item.title}</span>
-                  {item.priority && (
-                    <span style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: primaryColor,
-                      background: `${primaryColor}20`,
-                      padding: '2px 8px',
-                      borderRadius: 10,
-                      letterSpacing: '0.05em',
-                    }}>
-                      PRIORITY
-                    </span>
-                  )}
-                </div>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#999', lineHeight: 1.4 }}>
-                  {item.description}
-                </p>
-                <p style={{ margin: '4px 0 0', fontSize: 11, color: '#666' }}>
-                  → {item.action}
-                </p>
-              </div>
+        {/* Stats row */}
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>{shippedTasks.length}</div>
+            <div style={{ fontSize: 11, color: '#888', letterSpacing: '0.05em' }}>SHIPPED</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: config.accentColor }}>{activeTasks.length + backlogTasks.length}</div>
+            <div style={{ fontSize: 11, color: '#888', letterSpacing: '0.05em' }}>IN QUEUE</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#FAFAFA' }}>{totalActive}</div>
+            <div style={{ fontSize: 11, color: '#888', letterSpacing: '0.05em' }}>TOTAL TASKS</div>
+          </div>
+          {timeSaved > 0 && (
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#4ADE80' }}>{Math.round(timeSaved)}h</div>
+              <div style={{ fontSize: 11, color: '#888', letterSpacing: '0.05em' }}>TIME SAVED</div>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Launch Roadmap */}
-      <div
-        style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: 16,
-          padding: 20,
-          marginBottom: 20,
-        }}
-      >
-        <h2 style={{ margin: '0 0 16px', fontSize: 17, fontWeight: 600, color: '#FAFAFA' }}>
-          Your Launch Roadmap
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {phases.map((phase, i) => (
-            <div
-              key={i}
+      {/* Task Groups */}
+      {taskGroups.map((group, gi) => (
+        <div
+          key={gi}
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: '#FAFAFA' }}>
+              {group.label}
+            </h2>
+            <span
               style={{
-                display: 'flex',
-                gap: 14,
-                padding: '14px 16px',
-                background: phase.status === 'in-progress'
-                  ? `${primaryColor}10`
-                  : 'rgba(255,255,255,0.015)',
-                border: `1px solid ${phase.status === 'in-progress'
-                  ? primaryColor + '33'
-                  : 'rgba(255,255,255,0.06)'}`,
-                borderRadius: 12,
-                alignItems: 'flex-start',
+                fontSize: 11,
+                fontWeight: 600,
+                color: group.color,
+                background: `${group.color}20`,
+                padding: '3px 10px',
+                borderRadius: 10,
+                letterSpacing: '0.05em',
               }}
             >
-              {/* Step number with line */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+              {group.tasks.length} {group.tasks.length === 1 ? 'TASK' : 'TASKS'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {group.tasks.map((task, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  padding: '12px 14px',
+                  background: task.priority === 'high' ? 'rgba(255,107,107,0.06)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${task.priority === 'high' ? 'rgba(255,107,107,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                  borderRadius: 10,
+                  alignItems: 'flex-start',
+                }}
+              >
                 <div
                   style={{
-                    width: 32,
-                    height: 32,
+                    width: 8,
+                    height: 8,
                     borderRadius: '50%',
-                    background: phase.status === 'in-progress'
-                      ? `linear-gradient(135deg, ${primaryColor}, ${config.accentColor})`
-                      : 'rgba(255,255,255,0.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 14,
-                    color: phase.status === 'in-progress' ? '#0A0A0A' : '#666',
-                    fontWeight: 700,
+                    background: statusColors[task.priority] || '#888',
+                    marginTop: 5,
+                    flexShrink: 0,
                   }}
-                >
-                  {phase.status === 'in-progress' ? phase.icon : i + 1}
-                </div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: phase.status === 'in-progress' ? '#FAFAFA' : '#888',
-                  }}>
-                    {phase.title}
-                  </span>
-                  {phase.status === 'in-progress' && (
-                    <span style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: '#0A0A0A',
-                      background: primaryColor,
-                      padding: '2px 8px',
-                      borderRadius: 10,
-                    }}>
-                      ACTIVE
-                    </span>
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: '#FAFAFA' }}>{task.title}</div>
+                  {task.description && (
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: '#888', lineHeight: 1.4 }}>
+                      {task.description.length > 200 ? task.description.slice(0, 200) + '...' : task.description}
+                    </p>
                   )}
                 </div>
-                <p style={{
-                  margin: '4px 0 0',
-                  fontSize: 13,
-                  color: phase.status === 'in-progress' ? '#AAA' : '#666',
-                  lineHeight: 1.4,
-                }}>
-                  {phase.description}
-                </p>
+                {task.priority === 'high' && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: '#FF6B6B',
+                      background: 'rgba(255,107,107,0.15)',
+                      padding: '2px 8px',
+                      borderRadius: 8,
+                      letterSpacing: '0.05em',
+                      flexShrink: 0,
+                    }}
+                  >
+                    HIGH
+                  </span>
+                )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      ))}
+
+      {/* Shipped Tasks (collapsed) */}
+      {shippedTasks.length > 0 && (
+        <div
+          style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 20,
+          }}
+        >
+          <h2 style={{ margin: '0 0 12px', fontSize: 17, fontWeight: 600, color: '#888' }}>
+            Shipped ({shippedTasks.length})
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {shippedTasks.map((task, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  padding: '8px 12px',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ color: '#4ADE80', fontSize: 14 }}>✓</span>
+                <span style={{ fontSize: 13, color: '#666', textDecoration: 'line-through', textDecorationColor: '#333' }}>
+                  {task.title}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Future / Icebox */}
+      {iceboxTasks.length > 0 && (
+        <div
+          style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 20,
+          }}
+        >
+          <h2 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 600, color: '#666' }}>
+            Future Phases ({iceboxTasks.length})
+          </h2>
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: '#555' }}>
+            Planned improvements for upcoming phases
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {iceboxTasks.map((task, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  padding: '8px 12px',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ color: '#444', fontSize: 12 }}>○</span>
+                <span style={{ fontSize: 13, color: '#555' }}>{task.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions Grid */}
       <div
@@ -418,7 +398,7 @@ export default function ClientPortalDashboard() {
         }}
       >
         <Link
-          href={`/portal/${clientSlug}/assets`}
+          href={`/portal/${clientSlug}/deliverables`}
           style={{
             padding: '20px 16px',
             background: `linear-gradient(135deg, ${primaryColor}20, ${primaryColor}08)`,
@@ -428,13 +408,13 @@ export default function ClientPortalDashboard() {
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 28, marginBottom: 8 }}>📤</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#FAFAFA' }}>Upload Files</div>
-          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Send us your assets</div>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>📁</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#FAFAFA' }}>Deliverables</div>
+          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Review our work</div>
         </Link>
 
         <Link
-          href={`/portal/${clientSlug}/deliverables`}
+          href={`/portal/${clientSlug}/assets`}
           style={{
             padding: '20px 16px',
             background: 'rgba(255, 255, 255, 0.03)',
@@ -444,9 +424,9 @@ export default function ClientPortalDashboard() {
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 28, marginBottom: 8 }}>📁</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#FAFAFA' }}>Deliverables</div>
-          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Review our work</div>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>📤</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#FAFAFA' }}>Upload Files</div>
+          <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Send us assets</div>
         </Link>
 
         <Link
@@ -536,8 +516,8 @@ export default function ClientPortalDashboard() {
       <div
         style={{
           padding: 20,
-          background: `linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(255, 0, 170, 0.08))`,
-          border: '1px solid rgba(0, 240, 255, 0.15)',
+          background: `linear-gradient(135deg, ${primaryColor}10, ${config.accentColor}08)`,
+          border: `1px solid ${primaryColor}20`,
           borderRadius: 16,
         }}
       >
