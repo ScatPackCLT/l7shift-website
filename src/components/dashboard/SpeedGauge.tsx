@@ -17,7 +17,7 @@ const sizes = {
 
 const START_DEG = 135
 const SWEEP_DEG = 270
-const MAX_X = 10
+const MAX_X = 5
 
 function polarToXY(cx: number, cy: number, r: number, deg: number) {
   const rad = ((deg - 90) * Math.PI) / 180
@@ -67,7 +67,7 @@ export function SpeedGauge({ shiftHours, traditionalHours, size = 'md', animated
   })
 
   // Scale labels at key positions
-  const labels = [1, 3, 5, 7, 10].map((val) => {
+  const labels = [1, 2, 3, 4, 5].map((val) => {
     const deg = START_DEG + ((val - 1) / (MAX_X - 1)) * SWEEP_DEG
     const pos = polarToXY(cx, cy, r + cfg.stroke / 2 + 24, deg)
     return (
