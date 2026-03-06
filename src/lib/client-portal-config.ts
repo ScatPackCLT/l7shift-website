@@ -22,8 +22,8 @@ const CONFIGS: Record<string, ClientPortalConfig> = {
     primaryColor: '#8B5CF6',
     accentColor: '#F59E0B',
     assetRequests: [
+      { icon: 'camera', title: 'Garment Style Photos for Order Page', description: 'We need photos of your actual blank garments for the custom order flow: T-Shirt, Long Sleeve, Hoodie, Crewneck Sweatshirt, Tank Top, Polo Shirt. The current ones are generic stock photos.', priority: true, category: 'photos' },
       { icon: 'image', title: 'New Collection Inspiration', description: 'Mood boards, design references, or inspiration images for upcoming collections.', priority: false, category: 'content' },
-      { icon: 'camera', title: 'New Product Photos', description: 'Photos for any new products or designs not yet on the site.', priority: false, category: 'photos' },
     ],
   },
   'shariels-lashes': {
