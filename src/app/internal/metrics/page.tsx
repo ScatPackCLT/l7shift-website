@@ -31,57 +31,61 @@ export default function MetricsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      // Fetch master stats from the single source of truth
-      const statsRes = await fetch('/api/metrics/public')
-      const masterStats = await statsRes.json()
-      setStats(masterStats)
+      try {
+        // Fetch master stats from the single source of truth
+        const statsRes = await fetch('/api/metrics/public')
+        const masterStats = await statsRes.json()
+        setStats(masterStats)
 
-      // Fetch per-project breakdown from Supabase
-      if (!supabase) { setLoading(false); return }
+        // Fetch per-project breakdown from Supabase
+        if (!supabase) { setLoading(false); return }
 
-      const { data: projectList } = await (supabase as ReturnType<typeof Object>)
-        .from('projects')
-        .select('id, name, status')
-        .in('status', ['active', 'completed'])
+        const { data: projectList } = await (supabase as ReturnType<typeof Object>)
+          .from('projects')
+          .select('id, name, status')
+          .in('status', ['active', 'completed'])
 
-      if (projectList) {
-        const projectMetrics: ProjectMetric[] = []
+        if (projectList) {
+          const projectMetrics: ProjectMetric[] = []
 
-        for (const project of projectList) {
-          const { data: tasks } = await (supabase as ReturnType<typeof Object>)
-            .from('tasks')
-            .select('shift_hours, traditional_hours_estimate, status')
-            .eq('project_id', project.id)
+          for (const project of projectList) {
+            const { data: tasks } = await (supabase as ReturnType<typeof Object>)
+              .from('tasks')
+              .select('shift_hours, traditional_hours_estimate, status')
+              .eq('project_id', project.id)
 
-          const taskList = tasks || []
-          const nonIceboxTasks = taskList.filter((t: { status: string }) => t.status !== 'icebox')
-          const shiftHours = nonIceboxTasks.reduce((s: number, t: { shift_hours: number | null }) => s + (t.shift_hours || 0), 0)
-          const traditionalEstimate = nonIceboxTasks.reduce((s: number, t: { traditional_hours_estimate: number | null }) => s + (t.traditional_hours_estimate || 0), 0)
-          const tasksShipped = nonIceboxTasks.filter((t: { status: string }) => t.status === 'shipped').length
-          const tasksTotal = nonIceboxTasks.length
-          const savings = traditionalEstimate > 0
-            ? Math.round(((traditionalEstimate - shiftHours) / traditionalEstimate) * 100)
-            : 0
-          const completion = tasksTotal > 0
-            ? Math.round((tasksShipped / tasksTotal) * 100)
-            : 0
+            const taskList = tasks || []
+            const nonIceboxTasks = taskList.filter((t: { status: string }) => t.status !== 'icebox')
+            const shiftHours = nonIceboxTasks.reduce((s: number, t: { shift_hours: number | null }) => s + (t.shift_hours || 0), 0)
+            const traditionalEstimate = nonIceboxTasks.reduce((s: number, t: { traditional_hours_estimate: number | null }) => s + (t.traditional_hours_estimate || 0), 0)
+            const tasksShipped = nonIceboxTasks.filter((t: { status: string }) => t.status === 'shipped').length
+            const tasksTotal = nonIceboxTasks.length
+            const savings = traditionalEstimate > 0
+              ? Math.round(((traditionalEstimate - shiftHours) / traditionalEstimate) * 100)
+              : 0
+            const completion = tasksTotal > 0
+              ? Math.round((tasksShipped / tasksTotal) * 100)
+              : 0
 
-          projectMetrics.push({
-            id: project.id,
-            name: project.name,
-            shiftHours: Math.round(shiftHours * 10) / 10,
-            traditionalEstimate: Math.round(traditionalEstimate),
-            tasksShipped,
-            tasksTotal,
-            savings,
-            completion,
-          })
+            projectMetrics.push({
+              id: project.id,
+              name: project.name,
+              shiftHours: Math.round(shiftHours * 10) / 10,
+              traditionalEstimate: Math.round(traditionalEstimate),
+              tasksShipped,
+              tasksTotal,
+              savings,
+              completion,
+            })
+          }
+
+          setProjects(projectMetrics)
         }
-
-        setProjects(projectMetrics)
+      } catch (error) {
+        console.error('Error fetching metrics:', error)
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     fetchData()
