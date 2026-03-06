@@ -103,22 +103,25 @@ export function SpeedGauge({ shiftHours, traditionalHours, size = 'md', animated
           {/* Gradient arc */}
           <path d={arcPath(cx, cy, r, START_DEG, START_DEG + SWEEP_DEG)}
             fill="none" stroke="url(#gaugeArc)" strokeWidth={cfg.stroke} strokeLinecap="round"
-            opacity={0.85} filter="url(#glow)" />
+            opacity={0.85} />
+          {/* Arc glow layer */}
+          <path d={arcPath(cx, cy, r, START_DEG, START_DEG + SWEEP_DEG)}
+            fill="none" stroke="url(#gaugeArc)" strokeWidth={cfg.stroke + 4} strokeLinecap="round"
+            opacity={0.15} />
 
           {ticks}
           {labels}
 
-          {/* Needle - drawn pointing UP from center, rotated via CSS */}
-          <g style={{
-            transformOrigin: `${cx}px ${cy}px`,
-            transform: `rotate(${angle}deg)`,
-            transition: animated ? 'transform 1.8s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-          }}>
-            {/* Needle body - points from center upward (to 12 o'clock = -90deg in SVG space) */}
+          {/* Needle - drawn pointing UP from center, rotated via SVG transform */}
+          <g transform={`rotate(${angle} ${cx} ${cy})`}>
+            {/* Needle glow */}
             <line x1={cx} y1={cy} x2={cx} y2={cy - r + 20}
-              stroke="#FAFAFA" strokeWidth={2.5} strokeLinecap="round" filter="url(#glow)" />
+              stroke="#00F0FF" strokeWidth={6} strokeLinecap="round" opacity={0.2} />
+            {/* Needle body */}
+            <line x1={cx} y1={cy} x2={cx} y2={cy - r + 20}
+              stroke="#FAFAFA" strokeWidth={2.5} strokeLinecap="round" />
             {/* Needle tip dot */}
-            <circle cx={cx} cy={cy - r + 20} r={3} fill="#00F0FF" filter="url(#glow)" />
+            <circle cx={cx} cy={cy - r + 20} r={4} fill="#00F0FF" />
           </g>
 
           {/* Center hub */}
