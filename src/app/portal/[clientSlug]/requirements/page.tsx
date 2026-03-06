@@ -272,7 +272,7 @@ export default function RequirementsPage() {
           >
             <span style={{ fontSize: 20 }}>✍️</span>
             <span style={{ color: '#FF00AA', fontSize: 14, fontWeight: 600 }}>
-              {pendingCount} awaiting your signoff
+              {pendingCount} need{pendingCount === 1 ? 's' : ''} your response
             </span>
           </div>
         )}
@@ -296,7 +296,10 @@ export default function RequirementsPage() {
             return (
               <div
                 key={req.id}
-                onClick={() => setSelectedDoc(req)}
+                onClick={() => {
+                  setSelectedDoc(req)
+                  setShowSignoffModal(true)
+                }}
                 style={{
                   padding: 24,
                   background: 'rgba(255, 255, 255, 0.03)',
@@ -345,25 +348,18 @@ export default function RequirementsPage() {
                   </div>
 
                   {req.status === 'review' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedDoc(req)
-                        setShowSignoffModal(true)
-                      }}
+                    <span
                       style={{
                         padding: '10px 20px',
                         background: 'linear-gradient(135deg, #00F0FF, #FF00AA)',
-                        border: 'none',
                         borderRadius: 8,
                         color: '#0A0A0A',
                         fontSize: 13,
                         fontWeight: 600,
-                        cursor: 'pointer',
                       }}
                     >
-                      Review & Sign
-                    </button>
+                      Read & Respond
+                    </span>
                   )}
 
                   {req.status === 'approved' && (
@@ -405,180 +401,38 @@ export default function RequirementsPage() {
         </div>
       )}
 
-      {/* Document Viewer Modal */}
-      {selectedDoc && !showSignoffModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: 40,
-          }}
-          onClick={() => setSelectedDoc(null)}
-        >
-          <div
-            style={{
-              background: '#0A0A0A',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 16,
-              maxWidth: 800,
-              maxHeight: '90vh',
-              overflow: 'auto',
-              width: '100%',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div
-              style={{
-                padding: 24,
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                position: 'sticky',
-                top: 0,
-                background: '#0A0A0A',
-                zIndex: 1,
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <span
-                      style={{
-                        padding: '4px 10px',
-                        background: 'rgba(0, 240, 255, 0.1)',
-                        borderRadius: 4,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: '#00F0FF',
-                      }}
-                    >
-                      v{selectedDoc.version}
-                    </span>
-                    <StatusPill status={selectedDoc.status} size="sm" />
-                  </div>
-                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: '#FAFAFA' }}>
-                    {selectedDoc.title}
-                  </h2>
-                </div>
-                <button
-                  onClick={() => setSelectedDoc(null)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#888',
-                    fontSize: 24,
-                    cursor: 'pointer',
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Content */}
-            <div style={{ padding: 24 }}>
-              {parseContentToSections(selectedDoc.content).map((section, i) => (
-                <div key={i} style={{ marginBottom: 28 }}>
-                  <h3
-                    style={{
-                      margin: '0 0 12px',
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: '#00F0FF',
-                    }}
-                  >
-                    {section.title}
-                  </h3>
-                  <div
-                    style={{
-                      padding: 16,
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      color: '#CCC',
-                      lineHeight: 1.8,
-                      whiteSpace: 'pre-wrap',
-                    }}
-                  >
-                    {section.content.trim()}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Modal Footer */}
-            {selectedDoc.status === 'review' && (
-              <div
-                style={{
-                  padding: 24,
-                  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  position: 'sticky',
-                  bottom: 0,
-                  background: '#0A0A0A',
-                }}
-              >
-                <p style={{ margin: 0, fontSize: 13, color: '#888' }}>
-                  By signing, you approve these requirements for implementation.
-                </p>
-                <button
-                  onClick={() => setShowSignoffModal(true)}
-                  style={{
-                    padding: '12px 24px',
-                    background: 'linear-gradient(135deg, #BFFF00, #00F0FF)',
-                    border: 'none',
-                    borderRadius: 8,
-                    color: '#0A0A0A',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  ✓ Sign Off & Approve
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Signoff Confirmation Modal */}
+      {/* Combined Read & Respond Modal */}
       {showSignoffModal && selectedDoc && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.9)',
+            background: 'rgba(0, 0, 0, 0.85)',
             backdropFilter: 'blur(8px)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
-            zIndex: 1001,
+            zIndex: 1000,
+            padding: '40px 16px',
+            overflowY: 'auto',
           }}
+          onClick={() => resetSignoffModal()}
         >
           <div
             style={{
               background: '#0A0A0A',
               border: signoffSuccess
                 ? '1px solid rgba(191, 255, 0, 0.5)'
-                : '1px solid rgba(191, 255, 0, 0.3)',
+                : '1px solid rgba(255, 255, 255, 0.15)',
               borderRadius: 16,
-              padding: 32,
-              maxWidth: 480,
+              maxWidth: 720,
               width: '100%',
-              textAlign: 'center',
+              margin: '20px 0',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             {signoffSuccess ? (
-              // Success State
-              <>
+              <div style={{ padding: 48, textAlign: 'center' }}>
                 <div
                   style={{
                     width: 64,
@@ -596,191 +450,228 @@ export default function RequirementsPage() {
                   ✓
                 </div>
                 <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 600, color: '#BFFF00' }}>
-                  Signed Successfully
+                  Response Submitted
                 </h2>
                 <p style={{ margin: 0, fontSize: 14, color: '#888' }}>
-                  Your approval has been recorded. Ken has been notified.
+                  Your response has been recorded. Ken has been notified.
                 </p>
-              </>
+              </div>
             ) : (
-              // Normal State
               <>
+                {/* Header */}
                 <div
                   style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: '50%',
-                    background: 'rgba(191, 255, 0, 0.1)',
+                    padding: 24,
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px',
-                    fontSize: 28,
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
                   }}
                 >
-                  ✍️
-                </div>
-
-                <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 600, color: '#FAFAFA' }}>
-                  Confirm Signoff
-                </h2>
-
-                <p style={{ margin: '0 0 24px', fontSize: 16, fontWeight: 600, color: '#00F0FF' }}>
-                  {selectedDoc.title}
-                </p>
-
-                {/* Full requirement content so client sees the questions */}
-                <div
-                  style={{
-                    padding: 16,
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: 8,
-                    marginBottom: 20,
-                    textAlign: 'left',
-                    maxHeight: 200,
-                    overflowY: 'auto',
-                  }}
-                >
-                  <div style={{ fontSize: 13, color: '#CCC', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                    {selectedDoc.content}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                      <span
+                        style={{
+                          padding: '4px 10px',
+                          background: 'rgba(0, 240, 255, 0.1)',
+                          borderRadius: 4,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#00F0FF',
+                        }}
+                      >
+                        v{selectedDoc.version}
+                      </span>
+                      <StatusPill status={selectedDoc.status} size="sm" />
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: '#FAFAFA' }}>
+                      {selectedDoc.title}
+                    </h2>
                   </div>
-                </div>
-
-                {/* Client Response */}
-                <div style={{ marginBottom: 20, textAlign: 'left' }}>
-                  <label
+                  <button
+                    onClick={() => resetSignoffModal()}
                     style={{
-                      display: 'block',
-                      fontSize: 12,
+                      background: 'none',
+                      border: 'none',
                       color: '#888',
-                      marginBottom: 8,
-                      textTransform: 'uppercase',
-                      letterSpacing: 1,
+                      fontSize: 24,
+                      cursor: 'pointer',
+                      padding: '0 4px',
                     }}
                   >
-                    Your Response
-                  </label>
-                  <textarea
-                    value={clientResponse}
-                    onChange={(e) => setClientResponse(e.target.value)}
-                    placeholder="Type your answers here..."
-                    rows={5}
-                    style={{
-                      width: '100%',
-                      padding: '14px 16px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: 8,
-                      color: '#FAFAFA',
-                      fontSize: 14,
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      resize: 'vertical',
-                    }}
-                  />
+                    ×
+                  </button>
                 </div>
 
-                {/* Signature Input */}
-                <div style={{ marginBottom: 16, textAlign: 'left' }}>
-                  <label
+                {/* Full Content */}
+                <div style={{ padding: 24 }}>
+                  {parseContentToSections(selectedDoc.content).map((section, i) => (
+                    <div key={i} style={{ marginBottom: 24 }}>
+                      <h3
+                        style={{
+                          margin: '0 0 10px',
+                          fontSize: 15,
+                          fontWeight: 600,
+                          color: config.primaryColor,
+                        }}
+                      >
+                        {section.title}
+                      </h3>
+                      <div
+                        style={{
+                          padding: 16,
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          borderRadius: 8,
+                          fontSize: 14,
+                          color: '#CCC',
+                          lineHeight: 1.8,
+                          whiteSpace: 'pre-wrap',
+                        }}
+                      >
+                        {section.content.trim()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Response + Sign Section */}
+                {selectedDoc.status === 'review' && (
+                  <div
                     style={{
-                      display: 'block',
-                      fontSize: 12,
-                      color: '#888',
-                      marginBottom: 8,
-                      textTransform: 'uppercase',
-                      letterSpacing: 1,
+                      padding: 24,
+                      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'rgba(255, 255, 255, 0.02)',
                     }}
                   >
-                    Type your name to sign
-                  </label>
-                  <input
-                    type="text"
-                    value={signatureName}
-                    onChange={(e) => {
-                      setSignatureName(e.target.value)
-                      setSignoffError(null)
-                    }}
-                    placeholder="Your full name"
-                    style={{
-                      width: '100%',
-                      padding: '14px 16px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: signoffError
-                        ? '1px solid #FF00AA'
-                        : '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: 8,
-                      color: '#FAFAFA',
-                      fontSize: 16,
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                  {signoffError && (
-                    <p style={{ margin: '8px 0 0', fontSize: 12, color: '#FF00AA' }}>
-                      {signoffError}
+                    <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600, color: '#FAFAFA' }}>
+                      Your Response
+                    </h3>
+
+                    <textarea
+                      value={clientResponse}
+                      onChange={(e) => setClientResponse(e.target.value)}
+                      placeholder="Type your answers, feedback, or questions here..."
+                      rows={6}
+                      style={{
+                        width: '100%',
+                        padding: '14px 16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: 8,
+                        color: '#FAFAFA',
+                        fontSize: 14,
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        resize: 'vertical',
+                        marginBottom: 20,
+                      }}
+                    />
+
+                    <div style={{ marginBottom: 16 }}>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: 12,
+                          color: '#888',
+                          marginBottom: 8,
+                          textTransform: 'uppercase',
+                          letterSpacing: 1,
+                        }}
+                      >
+                        Type your name to approve
+                      </label>
+                      <input
+                        type="text"
+                        value={signatureName}
+                        onChange={(e) => {
+                          setSignatureName(e.target.value)
+                          setSignoffError(null)
+                        }}
+                        placeholder="Your full name"
+                        style={{
+                          width: '100%',
+                          padding: '14px 16px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: signoffError
+                            ? '1px solid #FF00AA'
+                            : '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: 8,
+                          color: '#FAFAFA',
+                          fontSize: 16,
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      {signoffError && (
+                        <p style={{ margin: '8px 0 0', fontSize: 12, color: '#FF00AA' }}>
+                          {signoffError}
+                        </p>
+                      )}
+                    </div>
+
+                    <p style={{ margin: '0 0 16px', fontSize: 12, color: '#666', lineHeight: 1.6 }}>
+                      By clicking &quot;Submit & Approve&quot;, your response and approval will be recorded
+                      with a timestamp. Ken will be notified.
                     </p>
-                  )}
-                </div>
 
-                <div
-                  style={{
-                    padding: 16,
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    borderRadius: 8,
-                    marginBottom: 24,
-                    textAlign: 'left',
-                  }}
-                >
-                  <p style={{ margin: 0, fontSize: 12, color: '#888', lineHeight: 1.6 }}>
-                    By clicking &quot;Sign & Approve&quot;, you confirm that you have reviewed these requirements
-                    and authorize L7 Shift to proceed with implementation. This action will be recorded
-                    with a timestamp for your records.
-                  </p>
-                </div>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button
+                        onClick={resetSignoffModal}
+                        disabled={isSubmitting}
+                        style={{
+                          flex: 1,
+                          padding: '14px 24px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: 'none',
+                          borderRadius: 8,
+                          color: '#888',
+                          fontSize: 14,
+                          fontWeight: 500,
+                          cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                          opacity: isSubmitting ? 0.5 : 1,
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSignoff}
+                        disabled={isSubmitting || !signatureName.trim()}
+                        style={{
+                          flex: 1,
+                          padding: '14px 24px',
+                          background: isSubmitting || !signatureName.trim()
+                            ? 'rgba(191, 255, 0, 0.3)'
+                            : 'linear-gradient(135deg, #BFFF00, #00F0FF)',
+                          border: 'none',
+                          borderRadius: 8,
+                          color: '#0A0A0A',
+                          fontSize: 14,
+                          fontWeight: 600,
+                          cursor: isSubmitting || !signatureName.trim() ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {isSubmitting ? 'Submitting...' : '✓ Submit & Approve'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button
-                    onClick={resetSignoffModal}
-                    disabled={isSubmitting}
+                {/* Read-only footer for already-approved docs */}
+                {selectedDoc.status === 'approved' && (
+                  <div
                     style={{
-                      flex: 1,
-                      padding: '14px 24px',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      border: 'none',
-                      borderRadius: 8,
-                      color: '#888',
-                      fontSize: 14,
-                      fontWeight: 500,
-                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                      opacity: isSubmitting ? 0.5 : 1,
+                      padding: 24,
+                      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                      textAlign: 'center',
                     }}
                   >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSignoff}
-                    disabled={isSubmitting || !signatureName.trim()}
-                    style={{
-                      flex: 1,
-                      padding: '14px 24px',
-                      background: isSubmitting || !signatureName.trim()
-                        ? 'rgba(191, 255, 0, 0.3)'
-                        : 'linear-gradient(135deg, #BFFF00, #00F0FF)',
-                      border: 'none',
-                      borderRadius: 8,
-                      color: '#0A0A0A',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: isSubmitting || !signatureName.trim() ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {isSubmitting ? 'Signing...' : '✓ Sign & Approve'}
-                  </button>
-                </div>
+                    <span style={{ fontSize: 13, color: '#BFFF00', fontWeight: 600 }}>
+                      ✓ Approved on {new Date(selectedDoc.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>
