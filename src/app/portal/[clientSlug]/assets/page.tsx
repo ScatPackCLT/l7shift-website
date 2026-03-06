@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import {
-  getProjectBySlug,
-  CLIENT_SLUG_MAP,
-} from '@/lib/portal-utils'
+import { getProjectBySlug } from '@/lib/portal-utils'
+import { getClientConfig } from '@/lib/client-portal-config'
 
 interface UploadedFile {
   name: string
@@ -25,32 +23,6 @@ const CATEGORIES = [
   { value: 'general', label: 'Other', icon: '📎', desc: 'Anything else' },
 ]
 
-// Per-client asset request lists — keeps client-specific content isolated
-const CLIENT_ASSET_REQUESTS: Record<string, { icon: string; text: string; priority: boolean }[]> = {
-  'stitchwichs': [
-    { icon: '🎨', text: 'Logo files (PNG, SVG, or original design file)', priority: true },
-    { icon: '📸', text: 'Product photos — mockups, finished garments', priority: true },
-    { icon: '📸', text: 'Design reference images — inspiration, color palettes', priority: false },
-    { icon: '🎨', text: 'Any brand files — colors, fonts, mood boards', priority: false },
-    { icon: '📄', text: 'Product catalog or pricing sheet if available', priority: false },
-  ],
-  'shariels-lashes': [
-    { icon: '🎨', text: 'Logo files (PNG, SVG, or original design file)', priority: true },
-    { icon: '📸', text: 'Product photos — each style on white background + on face', priority: true },
-    { icon: '📸', text: 'Lifestyle photos — full look with lashes applied', priority: true },
-    { icon: '📸', text: 'Packaging photos — magnetic box open, standard box, bags', priority: false },
-    { icon: '🎨', text: 'Any brand files — colors, fonts, mood boards', priority: false },
-    { icon: '📄', text: 'Inventory list — styles, quantities, costs per unit', priority: true },
-  ],
-}
-
-const DEFAULT_ASSET_REQUESTS = [
-  { icon: '🎨', text: 'Logo files (PNG, SVG, or original design file)', priority: true },
-  { icon: '📸', text: 'Product or service photos', priority: true },
-  { icon: '🎨', text: 'Any brand files — colors, fonts, mood boards', priority: false },
-  { icon: '📄', text: 'Business documents, specs, or notes', priority: false },
-]
-
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
   const k = 1024
@@ -62,10 +34,7 @@ function formatBytes(bytes: number): string {
 export default function AssetsPage() {
   const params = useParams()
   const clientSlug = params.clientSlug as string
-  const config = CLIENT_SLUG_MAP[clientSlug] || {
-    primaryColor: '#00F0FF',
-    accentColor: '#BFFF00',
-  }
+  const config = getClientConfig(clientSlug)
 
   const [projectId, setProjectId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -227,7 +196,7 @@ export default function AssetsPage() {
           What we need from you:
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
-          {(CLIENT_ASSET_REQUESTS[clientSlug] || DEFAULT_ASSET_REQUESTS).map((item, i) => (
+          {config.assetRequests.map((item, i) => (
             <div
               key={i}
               style={{
@@ -240,9 +209,9 @@ export default function AssetsPage() {
                 border: item.priority ? `1px solid ${config.primaryColor}22` : '1px solid transparent',
               }}
             >
-              <span style={{ fontSize: 16 }}>{item.icon}</span>
+              <span style={{ fontSize: 16 }}>{item.icon === 'palette' ? '\u{1F3A8}' : item.icon === 'camera' ? '\u{1F4F8}' : item.icon === 'file' ? '\u{1F4C4}' : item.icon === 'image' ? '\u{1F5BC}\uFE0F' : item.icon === 'box' ? '\u{1F4E6}' : item.icon === 'pen' ? '\u{270D}\uFE0F' : '\u{1F4CB}'}</span>
               <span style={{ fontSize: 13, color: item.priority ? '#CCC' : '#888', lineHeight: 1.4 }}>
-                {item.text}
+                {item.title}: {item.description}
                 {item.priority && (
                   <span style={{ color: config.primaryColor, fontSize: 11, marginLeft: 6 }}>PRIORITY</span>
                 )}
